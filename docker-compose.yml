@@ -21,6 +21,11 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # 2. Servidor Backend Node/Express
   backend:
@@ -43,6 +48,11 @@ services:
           memory: 80M
         reservations:
           memory: 30M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # 3. Frontend Web Nginx
   frontend:
@@ -61,6 +71,11 @@ services:
           memory: 30M
         reservations:
           memory: 10M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   pgdata:

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import ThemeToggle from './ThemeToggle';
@@ -11,6 +11,7 @@ export default function Navbar({ title }) {
   const { notifications, markNotificationsAsRead } = useData();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const navigate = useNavigate();
 
   const unread = notifications.filter((n) => !n.read).length;
 
@@ -18,6 +19,25 @@ export default function Navbar({ title }) {
     setIsOpen(!isOpen);
     if (!isOpen && unread > 0) {
       markNotificationsAsRead();
+    }
+  };
+
+  const handleNotificationClick = (notif) => {
+    setIsOpen(false);
+    if (userType === 'barber') {
+      if (notif.type === 'message') {
+        navigate('/barbeiro/chat');
+      } else {
+        navigate('/barbeiro/agenda');
+      }
+    } else if (userType === 'client') {
+      if (notif.type === 'message') {
+        navigate('/cliente/chat');
+      } else {
+        navigate('/cliente/agendamentos');
+      }
+    } else if (userType === 'admin') {
+      navigate('/admin');
     }
   };
 
@@ -67,7 +87,11 @@ export default function Navbar({ title }) {
               <div className="notifications-list">
                 {notifications.length > 0 ? (
                   notifications.map((notif) => (
-                    <div key={notif.id} className={`notification-item ${!notif.read ? 'unread' : ''}`}>
+                    <div 
+                      key={notif.id} 
+                      className={`notification-item ${!notif.read ? 'unread' : ''}`}
+                      onClick={() => handleNotificationClick(notif)}
+                    >
                       <div className={`notification-item-icon ${notif.type}`}>
                         {getIcon(notif.type)}
                       </div>

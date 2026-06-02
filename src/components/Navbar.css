@@ -81,8 +81,8 @@
   gap: var(--space-md);
   padding: var(--space-md);
   border-bottom: 1px solid var(--border-color);
-  transition: background var(--transition-fast);
-  cursor: default;
+  transition: all var(--transition-fast);
+  cursor: pointer;
 }
 
 .notification-item:last-child {
@@ -90,7 +90,7 @@
 }
 
 .notification-item:hover {
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(200, 169, 110, 0.05);
 }
 
 .notification-item.unread {
