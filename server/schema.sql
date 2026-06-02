@@ -7,8 +7,15 @@ CREATE TABLE IF NOT EXISTS usuarios (
   phone VARCHAR(50),
   whatsapp VARCHAR(50),
   address TEXT,
-  avatar VARCHAR(255)
+  avatar TEXT, -- Changed to TEXT to allow compressed Base64 images
+  barbershop_name VARCHAR(255),
+  barbershop_description TEXT
 );
+
+-- Migrações seguras de colunas adicionais para tabelas existentes
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS barbershop_name VARCHAR(255);
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS barbershop_description TEXT;
+ALTER TABLE usuarios ALTER COLUMN avatar TYPE TEXT; -- Upgrade type to allow base64 strings
 
 CREATE TABLE IF NOT EXISTS barbearias (
   id VARCHAR(255) PRIMARY KEY,

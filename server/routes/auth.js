@@ -47,7 +47,22 @@ router.post('/login', async (req, res) => {
       userObj = userRes.rows[0];
     }
 
-    // Generate JWT token
+// Helper to map snake_case postgres columns to camelCase expected by the React frontend
+const mapUserToCamelCase = (dbUser) => {
+  if (!dbUser) return null;
+  const mapped = { ...dbUser };
+  if (dbUser.barbershop_name !== undefined) {
+    mapped.barbershopName = dbUser.barbershop_name;
+    delete dbUser.barbershop_name;
+  }
+  if (dbUser.barbershop_description !== undefined) {
+    mapped.barbershopDescription = dbUser.barbershop_description;
+    delete dbUser.barbershop_description;
+  }
+  return mapped;
+};
+
+// Generate JWT token
     const token = jwt.sign(
       { uid: userObj.uid, email: userObj.email, role: userObj.role },
       JWT_SECRET,
@@ -62,7 +77,7 @@ router.post('/login', async (req, res) => {
       maxAge: 24 * 60 * 60 * 1000 // 1 day
     });
 
-    return res.json({ user: userObj, userType: userObj.role });
+    return res.json({ user: mapUserToCamelCase(userObj), userType: userObj.role });
   } catch (err) {
     console.error('Login route error:', err.message);
     return res.status(500).json({ error: 'Erro interno do servidor ao autenticar' });
@@ -74,7 +89,7 @@ router.get('/session', async (req, res) => {
   const token = req.cookies.token;
   
   if (!token) {
-    return res.status(401).json({ error: 'Nenhuma sessão ativa encontrada' });
+    return res.status(401).json({ error: 'Nenhuma sessão activa encontrada' });
   }
 
   try {
@@ -91,7 +106,7 @@ router.get('/session', async (req, res) => {
     }
 
     const userObj = userRes.rows[0];
-    return res.json({ user: userObj, userType: userObj.role });
+    return res.json({ user: mapUserToCamelCase(userObj), userType: userObj.role });
   } catch (err) {
     res.clearCookie('token');
     return res.status(401).json({ error: 'Sessão expirada ou inválida' });
@@ -143,10 +158,53 @@ router.post('/register', async (req, res) => {
       maxAge: 24 * 60 * 60 * 1000
     });
 
-    return res.json({ user: userObj, userType: userObj.role });
+    return res.json({ user: mapUserToCamelCase(userObj), userType: userObj.role });
   } catch (err) {
     console.error('Register route error:', err.message);
     return res.status(500).json({ error: 'Erro ao registrar usuário' });
+  }
+});
+
+// Endpoint to update user profile details in database
+router.put('/profile', async (req, res) => {
+  const token = req.cookies.token;
+  if (!token) {
+    return res.status(401).json({ error: 'Não autorizado' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const { name, email, whatsapp, phone, address, avatar, barbershopName, barbershopDescription } = req.body;
+
+    const query = `
+      UPDATE usuarios 
+      SET name = $1, email = $2, whatsapp = $3, phone = $4, address = $5, avatar = $6,
+          barbershop_name = $7, barbershop_description = $8
+      WHERE uid = $9
+      RETURNING *
+    `;
+    const values = [
+      name,
+      email,
+      whatsapp,
+      phone,
+      address,
+      avatar,
+      barbershopName || null,
+      barbershopDescription || null,
+      decoded.uid
+    ];
+
+    const result = await pool.query(query, values);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Usuário não encontrado' });
+    }
+
+    return res.json({ user: mapUserToCamelCase(result.rows[0]) });
+  } catch (err) {
+    console.error('Update profile route error:', err.message);
+    return res.status(500).json({ error: 'Erro ao atualizar dados do perfil' });
   }
 });
 

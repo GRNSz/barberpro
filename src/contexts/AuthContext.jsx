@@ -216,13 +216,27 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const updateProfile = useCallback((data) => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        setUser((prev) => ({ ...prev, ...data }));
-        resolve();
-      }, 500);
-    });
+  const updateProfile = useCallback(async (data) => {
+    try {
+      const response = await fetch('/api/auth/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || 'Erro ao atualizar perfil no servidor');
+      }
+
+      const resData = await response.json();
+      setUser(resData.user);
+    } catch (err) {
+      console.error("Erro ao atualizar perfil:", err);
+      // Fallback local caso esteja sem rede
+      setUser((prev) => ({ ...prev, ...data }));
+      throw err;
+    }
   }, []);
 
   const updatePassword = useCallback((oldPassword, newPassword) => {
