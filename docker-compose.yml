@@ -62,7 +62,13 @@ services:
     container_name: barberpro-frontend
     ports:
       - "80:80"
+      - "443:443"
     restart: always
+    environment:
+      - DOMAIN=${DOMAIN:-localhost}
+    volumes:
+      - certs:/etc/letsencrypt
+      - challenge:/var/www/certbot
     depends_on:
       - backend
     deploy:
@@ -77,6 +83,24 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # 4. Certbot para gerenciamento do SSL Let's Encrypt
+  certbot:
+    image: certbot/certbot
+    container_name: barberpro-certbot
+    volumes:
+      - certs:/etc/letsencrypt
+      - challenge:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 volumes:
   pgdata:
+    driver: local
+  certs:
+    driver: local
+  challenge:
     driver: local

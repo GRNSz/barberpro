@@ -1,6 +1,29 @@
 server {
     listen 80;
-    server_name localhost;
+    server_name ${DOMAIN};
+
+    # Let's Encrypt ACME challenge location
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    # Redirect all HTTP requests to HTTPS
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl;
+    server_name ${DOMAIN};
+
+    ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+
+    # Basic SSL optimizations
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers on;
+    ssl_ciphers HIGH:!aNULL:!MD5;
 
     location / {
         root /usr/share/nginx/html;
@@ -22,7 +45,7 @@ server {
         root /usr/share/nginx/html;
     }
 
-    # Enable gzip compression for better performance & minimal resources
+    # Enable gzip compression for better performance
     gzip on;
     gzip_vary on;
     gzip_min_length 10240;
