@@ -1,8 +1,8 @@
 # --- Estágio 1: Dependências ---
 FROM node:18-alpine AS builder
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
+COPY package.json ./
+RUN npm install --omit=dev
 
 # --- Estágio 2: Execução ---
 FROM node:18-alpine AS runner
