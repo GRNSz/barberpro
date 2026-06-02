@@ -4,6 +4,7 @@ import { Clock, User, Heart } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import { useState } from 'react';
+import { downloadICS } from '../utils/calendar';
 import './AppointmentCard.css';
 
 export default function AppointmentCard({ appointment, showDate = true, onClick }) {
@@ -81,7 +82,7 @@ export default function AppointmentCard({ appointment, showDate = true, onClick 
       </div>
 
       {/* Expand/Collapse Toggle Button */}
-      <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: '6px' }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
         <button
           className="btn btn-ghost btn-sm"
           style={{ padding: '2px 8px', fontSize: '0.75rem', color: 'var(--accent-primary)', fontWeight: 'bold' }}
@@ -92,6 +93,19 @@ export default function AppointmentCard({ appointment, showDate = true, onClick 
         >
           {expanded ? '▲ Ocultar Anotações' : '▼ Ver Anotações'}
         </button>
+
+        {userType === 'client' && appointment.status !== 'cancelado' && (
+          <button
+            className="btn btn-ghost btn-sm"
+            style={{ padding: '2px 8px', fontSize: '0.75rem', color: 'var(--accent-primary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+            onClick={(e) => {
+              e.stopPropagation();
+              downloadICS(appointment);
+            }}
+          >
+            📅 Salvar na Agenda
+          </button>
+        )}
       </div>
 
       {/* Expanded Notes Section */}

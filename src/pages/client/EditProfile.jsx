@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { getInitials } from '../../utils/mockData';
+import { compressImage } from '../../utils/imageCompressor';
 import { Camera, Mail, Phone, MapPin, Lock, Check, User, ArrowLeft, AlignLeft, Scissors } from 'lucide-react';
 import './EditProfile.css';
 
@@ -50,14 +51,21 @@ export default function EditProfile() {
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setAvatar(reader.result);
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressedBase64 = await compressImage(file, 250, 250, 0.7);
+        setAvatar(compressedBase64);
+      } catch (err) {
+        console.error("Erro ao comprimir imagem:", err);
+        // Fallback robusto se a compressão falhar
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setAvatar(reader.result);
+        };
+        reader.readAsDataURL(file);
+      }
     }
   };
 

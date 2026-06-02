@@ -23,13 +23,29 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+
+  const url = new URL(event.request.url);
+
+  // Bypass API routes to avoid caching dynamic server responses
+  if (url.pathname.startsWith('/api/')) {
+    return;
+  }
+
+  // Stale-While-Revalidate strategy for static files
   event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-        return response;
-      })
-      .catch(() => caches.match(event.request))
+    caches.match(event.request).then((cachedResponse) => {
+      const fetchPromise = fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const clone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return networkResponse;
+        })
+        .catch(() => {
+          // Silent catch for offline fetch failure
+        });
+      return cachedResponse || fetchPromise;
+    })
   );
 });

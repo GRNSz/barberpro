@@ -55,9 +55,15 @@ const addEventToGoogleCalendar = async (appointment, token) => {
 export function DataProvider({ children }) {
   const { user, userType } = useAuth();
 
-  // Load from postgres API in full-stack mode, default to empty list while loading
-  const [appointments, setAppointments] = useState([]);
-  const [loyaltyCuts, setLoyaltyCuts] = useState(0);
+  // Load from postgres API in full-stack mode, default to cached values if available
+  const [appointments, setAppointments] = useState(() => {
+    const saved = localStorage.getItem('barberpro_appointments');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [loyaltyCuts, setLoyaltyCuts] = useState(() => {
+    const saved = localStorage.getItem('barberpro_loyalty_cuts');
+    return saved ? parseInt(saved, 10) : 0;
+  });
 
   // Other components stay in localStorage for fast UX
   const [notifications, setNotifications] = useState(() => {
@@ -91,9 +97,10 @@ export function DataProvider({ children }) {
       if (res.ok) {
         const data = await res.json();
         setAppointments(data);
+        localStorage.setItem('barberpro_appointments', JSON.stringify(data));
       }
     } catch (err) {
-      console.error("Error loading appointments from server:", err);
+      console.warn("Offline or server error loading appointments, using cached local copy:", err);
     }
   }, []);
 
@@ -105,9 +112,10 @@ export function DataProvider({ children }) {
       if (res.ok) {
         const data = await res.json();
         setLoyaltyCuts(data.cuts_count);
+        localStorage.setItem('barberpro_loyalty_cuts', String(data.cuts_count));
       }
     } catch (err) {
-      console.error("Error fetching loyalty cuts count:", err);
+      console.warn("Offline or server error fetching loyalty cuts count, using cached local copy:", err);
     }
   }, []);
 
