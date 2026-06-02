@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  barberpro:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: barberpro-app
+    ports:
+      - "80:80"
+    restart: unless-stopped

@@ -1,0 +1,396 @@
+/* ============================================
+   ClientDashboard
+   ============================================ */
+
+.client-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+}
+
+/* ---------- Welcome Section ---------- */
+.dashboard-welcome {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-xl);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-welcome::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 300px;
+  height: 300px;
+  background: var(--accent-gradient);
+  opacity: 0.06;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.welcome-greeting {
+  font-size: 0.9375rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.welcome-name {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 4px 0;
+}
+
+.welcome-subtitle {
+  font-size: 0.9375rem;
+  color: var(--text-secondary);
+}
+
+.welcome-avatar {
+  font-size: 1.5rem;
+}
+
+/* ---------- Quick Actions ---------- */
+.quick-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-md);
+}
+
+.quick-action-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-xl) var(--space-lg);
+  text-align: center;
+  cursor: pointer;
+  text-decoration: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.quick-action-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--accent-gradient);
+  opacity: 0;
+  transition: opacity var(--transition-base);
+}
+
+.quick-action-card:hover::before {
+  opacity: 0.04;
+}
+
+.quick-action-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--accent-primary);
+}
+
+.quick-action-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-lg);
+  background: rgba(200, 169, 110, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-primary);
+  transition: all var(--transition-base);
+}
+
+.quick-action-card:hover .quick-action-icon {
+  background: var(--accent-gradient);
+  color: var(--text-on-accent);
+  transform: scale(1.1);
+}
+
+.quick-action-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+  z-index: 1;
+}
+
+.quick-action-label {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--text-primary);
+}
+
+.quick-action-desc {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+/* ---------- Dashboard Section ---------- */
+.dashboard-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.section-link {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--accent-primary);
+  transition: opacity var(--transition-fast);
+}
+
+.section-link:hover {
+  opacity: 0.8;
+}
+
+/* ---------- Appointments List ---------- */
+.appointments-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+/* ---------- Empty State Mini ---------- */
+.empty-state-mini {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-2xl) var(--space-lg);
+  background: var(--bg-card);
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-lg);
+  text-align: center;
+}
+
+.empty-state-mini svg {
+  color: var(--text-muted);
+  opacity: 0.4;
+}
+
+.empty-state-mini p {
+  color: var(--text-muted);
+  font-size: 0.9375rem;
+}
+
+/* ---------- Barbershop Info Card ---------- */
+.barber-info-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.barber-info-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.barber-info-avatar {
+  font-size: 1.25rem;
+}
+
+.barber-info-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.barber-info-name {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.barber-info-rating {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stars-row {
+  display: flex;
+  gap: 2px;
+}
+
+.star-filled {
+  color: var(--accent-primary);
+  fill: var(--accent-primary);
+}
+
+.star-half {
+  color: var(--accent-primary);
+  fill: none;
+}
+
+.star-empty {
+  color: var(--text-muted);
+  opacity: 0.3;
+}
+
+.rating-value {
+  font-weight: 700;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+.rating-count {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.barber-info-address,
+.barber-info-hours {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.barber-info-address svg,
+.barber-info-hours svg {
+  color: var(--accent-primary);
+  flex-shrink: 0;
+}
+
+/* ---------- Responsive ---------- */
+.barber-info-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}
+
+.clickable-card {
+  text-decoration: none;
+  transition: all var(--transition-base);
+}
+
+.clickable-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent-primary);
+  box-shadow: var(--shadow-md);
+}
+
+.distance-badge {
+  margin-left: auto;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--accent-primary);
+  background: rgba(200, 169, 110, 0.1);
+  padding: 4px 10px;
+  border-radius: 100px;
+  border: 1px solid rgba(200, 169, 110, 0.2);
+}
+
+@media (max-width: 768px) {
+  .quick-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .quick-action-card {
+    flex-direction: row;
+    text-align: left;
+    padding: var(--space-lg);
+  }
+
+  .quick-action-icon {
+    width: 48px;
+    height: 48px;
+  }
+
+  .dashboard-welcome {
+    padding: var(--space-lg);
+  }
+
+  .welcome-name {
+    font-size: 1.5rem;
+  }
+}
+
+/* ---------- Promo Grid Section ---------- */
+.dashboard-promo-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+}
+
+.promo-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-md);
+  padding: var(--space-xl);
+  position: relative;
+  overflow: hidden;
+}
+
+.promo-card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(200, 169, 110, 0.1);
+  color: var(--accent-primary);
+  border: 1px solid rgba(200, 169, 110, 0.2);
+  padding: 4px 10px;
+  border-radius: 100px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.promo-card.sync-card.synced .promo-card-badge {
+  background: rgba(46, 213, 115, 0.1);
+  color: #2ed573;
+  border-color: rgba(46, 213, 115, 0.2);
+}
+
+.promo-card-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.promo-card-desc {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  margin-bottom: var(--space-sm);
+  flex-grow: 1;
+}
+
+.promo-btn {
+  align-self: flex-start;
+}
+
+.promo-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.promo-status-badge.synced {
+  background: rgba(46, 213, 115, 0.1);
+  color: #2ed573;
+  border: 1px solid rgba(46, 213, 115, 0.2);
+}
+
+@media (max-width: 768px) {
+  .dashboard-promo-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+

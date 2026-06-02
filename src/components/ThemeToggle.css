@@ -1,0 +1,48 @@
+.theme-toggle {
+  background: none;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.theme-toggle-track {
+  width: 52px;
+  height: 28px;
+  border-radius: 14px;
+  position: relative;
+  transition: background var(--transition-base);
+  display: flex;
+  align-items: center;
+}
+
+.theme-toggle-track.light {
+  background: linear-gradient(135deg, #FFD93D, #FF9A3C);
+}
+
+.theme-toggle-track.dark {
+  background: linear-gradient(135deg, #2C3E50, #4A6FA5);
+}
+
+.theme-toggle-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: white;
+  position: absolute;
+  top: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform var(--transition-base);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.theme-toggle-track.light .theme-toggle-thumb {
+  transform: translateX(3px);
+  color: #FF9A3C;
+}
+
+.theme-toggle-track.dark .theme-toggle-thumb {
+  transform: translateX(27px);
+  color: #4A6FA5;
+}

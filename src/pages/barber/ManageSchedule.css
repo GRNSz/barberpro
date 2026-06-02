@@ -1,0 +1,186 @@
+/* ============================================
+   ManageSchedule — Page Styles
+   ============================================ */
+
+.manage-schedule {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+  padding-bottom: var(--space-2xl);
+}
+
+/* ---------- Week Navigation ---------- */
+.schedule-week-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.schedule-week-days {
+  display: flex;
+  flex: 1;
+  gap: var(--space-xs);
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.schedule-week-days::-webkit-scrollbar {
+  display: none;
+}
+
+.schedule-day-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  min-width: 56px;
+  position: relative;
+}
+
+.schedule-day-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-color);
+}
+
+.schedule-day-btn.active {
+  background: rgba(200, 169, 110, 0.12);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.schedule-day-label {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.schedule-day-num {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.schedule-day-count {
+  font-size: 0.625rem;
+  font-weight: 700;
+  background: var(--accent-primary);
+  color: var(--text-on-accent);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+/* ---------- Day Header ---------- */
+.schedule-day-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  opacity: 0;
+  animation: fadeInUp 0.5s ease forwards;
+  animation-delay: 0.15s;
+}
+
+.schedule-day-header h2 {
+  text-transform: capitalize;
+}
+
+/* ---------- Appointments ---------- */
+.schedule-appointments {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.schedule-appointment-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  transition: all var(--transition-base);
+}
+
+.schedule-appointment-row:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--accent-primary);
+}
+
+.schedule-appointment-row .appointment-card {
+  background: transparent;
+  border: none;
+  padding: 0;
+  box-shadow: none;
+}
+
+.schedule-actions {
+  display: flex;
+  gap: var(--space-sm);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--border-color);
+}
+
+.schedule-btn-confirm,
+.schedule-btn-cancel {
+  flex: 1;
+}
+
+@media (min-width: 769px) {
+  .schedule-appointment-row {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .schedule-appointment-row .appointment-card {
+    flex: 1;
+  }
+
+  .schedule-actions {
+    border-top: none;
+    border-left: 1px solid var(--border-color);
+    padding-top: 0;
+    padding-left: var(--space-md);
+    flex-direction: column;
+    flex: 0 0 auto;
+  }
+
+  .schedule-btn-confirm,
+  .schedule-btn-cancel {
+    flex: unset;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 480px) {
+  .schedule-week-nav {
+    padding: var(--space-sm);
+  }
+
+  .schedule-day-btn {
+    min-width: 44px;
+    padding: var(--space-xs) var(--space-sm);
+  }
+
+  .schedule-day-num {
+    font-size: 1rem;
+  }
+}

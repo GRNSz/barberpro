@@ -1,0 +1,270 @@
+/* ============================================
+   ClientDetails — Page Styles
+   ============================================ */
+
+.client-details-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+  padding-bottom: var(--space-2xl);
+}
+
+/* ---------- Search Bar ---------- */
+.client-search-bar {
+  position: sticky;
+  top: 72px;
+  z-index: 10;
+  padding: var(--space-sm) 0;
+}
+
+.client-search-bar .input {
+  width: 100%;
+}
+
+/* ---------- Layout ---------- */
+.client-layout {
+  display: flex;
+  gap: var(--space-xl);
+  align-items: flex-start;
+}
+
+@media (max-width: 1024px) {
+  .client-layout {
+    flex-direction: column;
+  }
+}
+
+/* ---------- Client List ---------- */
+.client-list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+
+/* ---------- Client Card ---------- */
+.client-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.client-card:hover {
+  border-color: var(--accent-primary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.client-card-selected {
+  border-color: var(--accent-primary);
+  background: rgba(200, 169, 110, 0.04);
+  box-shadow: var(--shadow-accent);
+}
+
+.client-card-avatar {
+  font-size: 1.125rem;
+}
+
+.client-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.client-card-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.client-card-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-bottom: var(--space-sm);
+}
+
+.client-card-meta span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.client-card-stats {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.client-card-last-visit {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.client-card-date {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+@media (max-width: 480px) {
+  .client-card {
+    flex-wrap: wrap;
+  }
+
+  .client-card-last-visit {
+    width: 100%;
+    flex-direction: row;
+    justify-content: space-between;
+    padding-top: var(--space-sm);
+    border-top: 1px solid var(--border-color);
+  }
+}
+
+/* ---------- Detail Panel ---------- */
+.client-detail-panel {
+  flex: 0 0 400px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: var(--space-xl);
+  box-shadow: var(--shadow-lg);
+  position: sticky;
+  top: 100px;
+  max-height: calc(100dvh - 120px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+}
+
+@media (max-width: 1024px) {
+  .client-detail-panel {
+    flex: unset;
+    width: 100%;
+    position: static;
+    max-height: none;
+  }
+}
+
+.client-detail-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  position: relative;
+}
+
+.client-detail-avatar {
+  font-size: 1.5rem;
+}
+
+.client-detail-close {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+.client-detail-contacts {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: var(--space-sm);
+}
+
+.client-detail-contacts span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+
+/* ---------- Detail Sections ---------- */
+.client-detail-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.client-detail-section h3 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xs);
+}
+
+.client-notes-textarea {
+  resize: vertical;
+  min-height: 80px;
+  width: 100%;
+}
+
+.btn-success-feedback {
+  background: var(--success);
+  color: white;
+  pointer-events: none;
+  animation: pulse 0.5s ease;
+}
+
+/* ---------- History List ---------- */
+.client-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.client-history-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-hover);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.client-history-item:hover {
+  background: rgba(200, 169, 110, 0.08);
+}
+
+.client-history-date {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  flex-shrink: 0;
+  min-width: 75px;
+}
+
+.client-history-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.client-history-service {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.client-history-time {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.client-history-price {
+  font-weight: 600;
+  font-size: 0.8125rem;
+  color: var(--accent-primary);
+  flex-shrink: 0;
+}

@@ -1,0 +1,247 @@
+/* ============================================
+   ExploreBarbershops
+   ============================================ */
+
+.explore-barbershops {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+/* ---------- Search Bar ---------- */
+.explore-search-wrapper {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.explore-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-lg);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  transition: all var(--transition-base);
+}
+
+.explore-search:focus-within {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(200, 169, 110, 0.15);
+}
+
+.explore-search-icon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.explore-search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 1rem;
+  outline: none;
+  padding: var(--space-sm) 0;
+}
+
+.explore-search-input::placeholder {
+  color: var(--text-muted);
+}
+
+/* ---------- View Toggle ---------- */
+.explore-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.explore-toggle {
+  display: flex;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--space-sm) var(--space-lg);
+  font-size: 0.875rem;
+  font-weight: 600;
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.toggle-btn.active {
+  background: var(--accent-primary);
+  color: var(--text-on-accent);
+}
+
+.toggle-btn:not(.active):hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.explore-results-count {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+/* ---------- List View ---------- */
+.explore-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.explore-card {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  cursor: pointer;
+  text-align: left;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  transition: all var(--transition-base);
+  width: 100%;
+}
+
+.explore-card:hover {
+  border-color: var(--accent-primary);
+  transform: translateX(4px);
+  box-shadow: var(--shadow-md);
+}
+
+.explore-card-avatar {
+  flex-shrink: 0;
+  font-size: 1.125rem;
+}
+
+.explore-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.explore-card-name {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.explore-card-rating {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.explore-card-rating .star-filled {
+  color: var(--accent-primary);
+  fill: var(--accent-primary);
+}
+
+.explore-card-rating .rating-value {
+  font-weight: 700;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+.explore-card-rating .rating-count {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.explore-card-address {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+
+.explore-card-address svg {
+  color: var(--accent-primary);
+  flex-shrink: 0;
+}
+
+.explore-card-footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-top: 4px;
+}
+
+.explore-distance-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent-primary);
+  background: rgba(200, 169, 110, 0.12);
+  border-radius: var(--radius-full);
+}
+
+.explore-price-hint {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* ---------- Map View ---------- */
+.explore-map-wrapper {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+
+/* ---------- Empty State ---------- */
+.explore-barbershops .empty-state-mini {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-2xl) var(--space-lg);
+  background: var(--bg-card);
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-lg);
+  text-align: center;
+}
+
+.explore-barbershops .empty-state-mini svg {
+  color: var(--text-muted);
+  opacity: 0.4;
+}
+
+.explore-barbershops .empty-state-mini p {
+  color: var(--text-muted);
+  font-size: 0.9375rem;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 480px) {
+  .explore-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .explore-card-avatar {
+    align-self: flex-start;
+  }
+
+  .explore-toggle-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

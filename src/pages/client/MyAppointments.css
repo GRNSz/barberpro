@@ -1,0 +1,45 @@
+/* ============================================
+   MyAppointments
+   ============================================ */
+
+.my-appointments {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+/* ---------- Tabs ---------- */
+.my-appointments-tabs {
+  position: sticky;
+  top: 64px;
+  z-index: 10;
+  margin-bottom: var(--space-sm);
+}
+
+@media (max-width: 768px) {
+  .my-appointments-tabs {
+    top: 56px;
+  }
+}
+
+.tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  margin-left: 6px;
+  border-radius: var(--radius-full);
+  background: var(--accent-primary);
+  color: var(--text-on-accent);
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+/* ---------- Appointments List ---------- */
+.my-appointments .appointments-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}

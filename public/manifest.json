@@ -1,0 +1,26 @@
+{
+  "name": "BarberPro — Gerenciamento de Barbearia",
+  "short_name": "BarberPro",
+  "description": "Gerencie sua barbearia com agendamento online, chat com clientes e muito mais.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1a2e",
+  "theme_color": "#C8A96E",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "lifestyle"],
+  "lang": "pt-BR"
+}

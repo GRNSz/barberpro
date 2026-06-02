@@ -1,0 +1,86 @@
+.map-container {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-md);
+}
+
+.leaflet-map {
+  height: 100%;
+  width: 100%;
+  z-index: 1;
+}
+
+.map-popup .leaflet-popup-content-wrapper {
+  background: var(--bg-card, #fff);
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+  padding: 0;
+}
+
+.map-popup .leaflet-popup-tip {
+  background: var(--bg-card, #fff);
+}
+
+.map-popup-content {
+  padding: 12px 16px;
+  min-width: 200px;
+}
+
+.map-popup-name {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin-bottom: 4px;
+}
+
+.map-popup-rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 6px;
+}
+
+.map-popup-reviews {
+  color: #999;
+  font-weight: 400;
+}
+
+.map-popup-address {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: #666;
+  margin-bottom: 10px;
+}
+
+.map-popup-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  padding: 8px;
+  background: linear-gradient(135deg, #C8A96E, #8B6914);
+  color: #1a1a2e;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.map-popup-btn:hover {
+  opacity: 0.9;
+}
+
+/* Fix leaflet default icon issues */
+.leaflet-default-icon-path {
+  background-image: none;
+}

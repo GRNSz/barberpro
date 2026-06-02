@@ -1,0 +1,186 @@
+/* ============================================
+   DailySummary — Component Styles
+   ============================================ */
+
+.daily-summary {
+  margin-bottom: var(--space-md);
+}
+
+.daily-summary-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-left: 4px solid;
+  border-image: var(--accent-gradient) 1;
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle glow effect */
+.daily-summary-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, var(--accent-primary), transparent 70%);
+  opacity: 0.5;
+}
+
+/* ---------- Header ---------- */
+.daily-summary-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-md);
+}
+
+.daily-summary-title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.daily-summary-icon {
+  color: var(--accent-primary);
+}
+
+.daily-summary-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+/* ---------- Badge ---------- */
+.daily-summary-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  border-radius: 100px;
+  letter-spacing: 0.3px;
+}
+
+.badge-ai {
+  background: var(--accent-gradient);
+  color: #fff;
+  animation: shimmerBadge 3s ease-in-out infinite;
+}
+
+.badge-auto {
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+@keyframes shimmerBadge {
+  0%, 100% {
+    box-shadow: 0 0 4px rgba(200, 169, 110, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 12px rgba(200, 169, 110, 0.45);
+  }
+}
+
+/* ---------- Refresh ---------- */
+.daily-summary-refresh {
+  color: var(--text-muted);
+  transition: color var(--transition-base);
+}
+
+.daily-summary-refresh:hover {
+  color: var(--accent-primary);
+}
+
+.spin {
+  animation: spinRefresh 1s linear infinite;
+}
+
+@keyframes spinRefresh {
+  to { transform: rotate(360deg); }
+}
+
+/* ---------- Body ---------- */
+.daily-summary-body {
+  min-height: 48px;
+}
+
+.daily-summary-text {
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+/* ---------- Skeleton Loading ---------- */
+.daily-summary-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.skeleton-line {
+  height: 14px;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    var(--bg-hover) 25%,
+    var(--border-color) 50%,
+    var(--bg-hover) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.5s ease-in-out infinite;
+}
+
+.skeleton-line-long {
+  width: 100%;
+}
+
+.skeleton-line-medium {
+  width: 75%;
+}
+
+.skeleton-line-short {
+  width: 50%;
+}
+
+@keyframes skeletonShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 768px) {
+  .daily-summary-card {
+    padding: var(--space-md);
+  }
+
+  .daily-summary-title {
+    font-size: 0.9375rem;
+  }
+
+  .daily-summary-text {
+    font-size: 0.875rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .daily-summary-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-sm);
+  }
+
+  .daily-summary-refresh {
+    position: absolute;
+    top: var(--space-md);
+    right: var(--space-md);
+  }
+}
