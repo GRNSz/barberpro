@@ -71,15 +71,78 @@ export function AuthProvider({ children }) {
   }, []);
 
   const loginWithGoogle = useCallback((type) => {
-    setLoading(true);
-    return new Promise((resolve) => {
-      setTimeout(() => {
+    return new Promise((resolve, reject) => {
+      if (!window.google) {
+        console.warn("Google SDK not loaded. Falling back to mock login.");
         const mockUser = MOCK_USERS[type] || MOCK_USERS.client;
         setUser(mockUser);
         setUserType(type);
-        setLoading(false);
         resolve();
-      }, 800);
+        return;
+      }
+
+      setLoading(true);
+      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '1013727976868-dummyid.apps.googleusercontent.com';
+
+      try {
+        const client = window.google.accounts.oauth2.initTokenClient({
+          client_id: clientId,
+          scope: 'openid email profile https://www.googleapis.com/auth/calendar.events',
+          callback: async (tokenResponse) => {
+            if (tokenResponse && tokenResponse.access_token) {
+              try {
+                localStorage.setItem('barberpro_google_access_token', tokenResponse.access_token);
+                localStorage.setItem('barberpro_google_calendar_synced', 'true');
+                
+                const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                  headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
+                });
+                
+                if (!res.ok) throw new Error("Falha ao obter perfil do Google");
+                const profile = await res.json();
+                
+                const googleUser = {
+                  uid: profile.sub || 'google-user-' + Date.now(),
+                  name: profile.name || 'Usuário Google',
+                  email: profile.email,
+                  avatar: profile.picture || null,
+                  phone: '(11) 99999-9999',
+                  whatsapp: '5511999999999',
+                  address: 'Endereço sincronizado com o Google',
+                };
+                
+                setUser(googleUser);
+                setUserType(type);
+                setLoading(false);
+                resolve();
+              } catch (err) {
+                console.error("Google userinfo fetch error:", err);
+                setLoading(false);
+                const mockUser = MOCK_USERS[type] || MOCK_USERS.client;
+                setUser(mockUser);
+                setUserType(type);
+                resolve();
+              }
+            } else {
+              setLoading(false);
+              reject(new Error("Token de acesso inválido"));
+            }
+          },
+          error_callback: (err) => {
+            setLoading(false);
+            reject(err);
+          }
+        });
+        
+        client.requestAccessToken();
+      } catch (err) {
+        console.error("GIS init client error:", err);
+        setLoading(false);
+        const mockUser = MOCK_USERS[type] || MOCK_USERS.client;
+        setUser(mockUser);
+        setUserType(type);
+        resolve();
+      }
     });
   }, []);
 

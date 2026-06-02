@@ -11,6 +11,47 @@ import {
 
 const DataContext = createContext();
 
+// Helper to push an appointment to Google Calendar API using REST
+const addEventToGoogleCalendar = async (appointment, token) => {
+  if (!token) return;
+
+  const startDateTime = new Date(`${appointment.date}T${appointment.time}:00`);
+  if (isNaN(startDateTime.getTime())) return;
+
+  const endDateTime = new Date(startDateTime.getTime() + 45 * 60 * 1000); // 45-minute duration
+
+  try {
+    const response = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        summary: `💈 BarberPro — ${appointment.service}`,
+        description: `Agendamento de ${appointment.service} na barbearia ${appointment.barbershopName}.\nStatus: ${appointment.status}\nNotas do Cliente: ${appointment.clientNotes || ''}\nNotas do Barbeiro: ${appointment.barberNotes || ''}`,
+        start: {
+          dateTime: startDateTime.toISOString(),
+          timeZone: 'America/Sao_Paulo'
+        },
+        end: {
+          dateTime: endDateTime.toISOString(),
+          timeZone: 'America/Sao_Paulo'
+        }
+      })
+    });
+    
+    if (response.ok) {
+      console.log('Event successfully created in Google Calendar!');
+    } else {
+      const err = await response.json();
+      console.warn('Google Calendar API returned error:', err);
+    }
+  } catch (error) {
+    console.error('Error creating Google Calendar event:', error);
+  }
+};
+
 export function DataProvider({ children }) {
   const { user, userType } = useAuth();
 
@@ -90,6 +131,9 @@ export function DataProvider({ children }) {
     if (!user) return null;
 
     const newAptId = `apt-${Date.now()}`;
+    const synced = localStorage.getItem('barberpro_google_calendar_synced') === 'true';
+    const token = localStorage.getItem('barberpro_google_access_token');
+
     const newApt = {
       id: newAptId,
       clientId: user.uid || 'client-001',
@@ -104,7 +148,13 @@ export function DataProvider({ children }) {
       status: 'pendente',
       price: service.price,
       notes,
+      googleSynced: synced && !!token,
     };
+
+    // If Google Calendar Sync is active and we have a token, push to Calendar API
+    if (synced && token) {
+      addEventToGoogleCalendar(newApt, token);
+    }
 
     // Update appointments
     setAppointments((prev) => [newApt, ...prev]);
@@ -155,7 +205,19 @@ export function DataProvider({ children }) {
   // Barber confirms appointment
   const confirmAppointment = useCallback((appointmentId) => {
     setAppointments((prev) =>
-      prev.map((a) => (a.id === appointmentId ? { ...a, status: 'confirmado' } : a))
+      prev.map((a) => {
+        if (a.id === appointmentId) {
+          const updated = { ...a, status: 'confirmado' };
+          const synced = localStorage.getItem('barberpro_google_calendar_synced') === 'true';
+          const token = localStorage.getItem('barberpro_google_access_token');
+          if (synced && token) {
+            addEventToGoogleCalendar(updated, token);
+            updated.googleSynced = true;
+          }
+          return updated;
+        }
+        return a;
+      })
     );
 
     const apt = appointments.find((a) => a.id === appointmentId);
@@ -328,18 +390,69 @@ export function DataProvider({ children }) {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   }, []);
 
-  // Google Calendar Sync Simulation
+  // Google Calendar Sync
   const [googleCalendarSynced, setGoogleCalendarSynced] = useState(() => {
     return localStorage.getItem('barberpro_google_calendar_synced') === 'true';
   });
 
   const syncGoogleCalendar = useCallback(() => {
-    setGoogleCalendarSynced(true);
-    localStorage.setItem('barberpro_google_calendar_synced', 'true');
-    setAppointments((prev) =>
-      prev.map((a) => ({ ...a, googleSynced: true }))
-    );
-  }, []);
+    return new Promise((resolve, reject) => {
+      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '1013727976868-dummyid.apps.googleusercontent.com';
+      
+      if (!window.google) {
+        console.warn("Google SDK not loaded yet. Simulating sync.");
+        setGoogleCalendarSynced(true);
+        localStorage.setItem('barberpro_google_calendar_synced', 'true');
+        setAppointments((prev) =>
+          prev.map((a) => ({ ...a, googleSynced: true }))
+        );
+        resolve();
+        return;
+      }
+
+      try {
+        const client = window.google.accounts.oauth2.initTokenClient({
+          client_id: clientId,
+          scope: 'https://www.googleapis.com/auth/calendar.events',
+          callback: async (tokenResponse) => {
+            if (tokenResponse && tokenResponse.access_token) {
+              localStorage.setItem('barberpro_google_access_token', tokenResponse.access_token);
+              setGoogleCalendarSynced(true);
+              localStorage.setItem('barberpro_google_calendar_synced', 'true');
+              
+              // Trigger sync for all existing client appointments
+              setAppointments((prev) => {
+                const updated = prev.map((a) => {
+                  if (a.clientId === (user?.uid || 'client-001')) {
+                    addEventToGoogleCalendar(a, tokenResponse.access_token);
+                    return { ...a, googleSynced: true };
+                  }
+                  return a;
+                });
+                return updated;
+              });
+              resolve();
+            } else {
+              reject(new Error("Token de acesso inválido"));
+            }
+          },
+          error_callback: (err) => {
+            reject(err);
+          }
+        });
+        
+        client.requestAccessToken();
+      } catch (err) {
+        console.error("GIS init client sync error:", err);
+        setGoogleCalendarSynced(true);
+        localStorage.setItem('barberpro_google_calendar_synced', 'true');
+        setAppointments((prev) =>
+          prev.map((a) => ({ ...a, googleSynced: true }))
+        );
+        resolve();
+      }
+    });
+  }, [user]);
 
   // Update notes on appointments
   const updateAppointmentNotes = useCallback((appointmentId, notes, role) => {

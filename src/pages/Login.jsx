@@ -33,8 +33,21 @@ export default function Login() {
     }
   };
 
-  const handleGoogleClick = () => {
-    setShowGoogleModal(true);
+  const handleGoogleClick = async () => {
+    setError('');
+    if (window.google) {
+      try {
+        await loginWithGoogle(userType);
+        let redirect = '/cliente';
+        if (userType === 'barber') redirect = '/barbeiro';
+        if (userType === 'admin') redirect = '/admin';
+        navigate(redirect);
+      } catch {
+        setError('Erro ao fazer login com o Google.');
+      }
+    } else {
+      setShowGoogleModal(true);
+    }
   };
 
   const selectGoogleAccount = async (accountEmail, role) => {
