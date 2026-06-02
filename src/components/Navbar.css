@@ -163,4 +163,8 @@
     width: calc(100vw - 2 * var(--space-md));
     max-height: 350px;
   }
+
+  .navbar-title {
+    margin-left: 44px;
+  }
 }

@@ -1,8 +1,8 @@
 .sidebar-mobile-toggle {
   display: none;
   position: fixed;
-  top: 14px;
-  left: 14px;
+  top: 8px;
+  left: 8px;
   z-index: 250;
   background: var(--bg-card) !important;
   border: 1px solid var(--border-color) !important;
