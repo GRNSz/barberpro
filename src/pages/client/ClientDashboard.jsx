@@ -10,7 +10,7 @@ import './ClientDashboard.css';
 
 export default function ClientDashboard() {
   const { user } = useAuth();
-  const { appointments, favorites, googleCalendarSynced, syncGoogleCalendar } = useData();
+  const { appointments, favorites, googleCalendarSynced, syncGoogleCalendar, loyaltyCuts } = useData();
   const clientId = user?.uid || 'client-001';
  
   const upcomingAppointments = useMemo(() => {
@@ -70,6 +70,19 @@ export default function ClientDashboard() {
     }
     return stars;
   };
+
+  // Gamification: Loyalty Card Stamps Calculation
+  const currentStamps = loyaltyCuts % 10;
+  const isRewardReady = loyaltyCuts > 0 && currentStamps === 0;
+  const stamps = [];
+  for (let i = 1; i <= 10; i++) {
+    const isStamped = i <= currentStamps || (isRewardReady && i === 10);
+    stamps.push(
+      <div key={i} className={`loyalty-stamp ${isStamped ? 'stamped' : ''}`}>
+        {isStamped ? '💈' : i}
+      </div>
+    );
+  }
 
   return (
     <div className="page-enter client-dashboard">
@@ -140,6 +153,41 @@ export default function ClientDashboard() {
               Acessar Dicas
             </Link>
           </div>
+        </div>
+      </section>
+
+      {/* Gamification - Loyalty Card */}
+      <section className="dashboard-section loyalty-section animate-fade-in-up">
+        <div className="loyalty-card card">
+          <div className="loyalty-header">
+            <div>
+              <span className="loyalty-badge">
+                ⭐ Cartão Fidelidade
+              </span>
+              <h3 className="loyalty-title">BarberClub Rewards</h3>
+            </div>
+            <div className="loyalty-progress-text">
+              <span className="font-bold text-accent">{currentStamps === 0 && loyaltyCuts > 0 ? 10 : currentStamps}</span>/10 cortes
+            </div>
+          </div>
+          
+          <p className="loyalty-desc text-muted">
+            Complete 10 cortes de cabelo ou barba e ganhe o próximo totalmente de graça!
+          </p>
+          
+          <div className="loyalty-stamps-grid">
+            {stamps}
+          </div>
+
+          {isRewardReady && (
+            <div className="loyalty-reward-box animate-scale-in">
+              <div className="reward-icon">🎁</div>
+              <div className="reward-info">
+                <span className="reward-congrats">Parabéns! Recompensa Liberada!</span>
+                <span className="reward-coupon">Apresente o código: <strong className="text-gradient">CORTEGRATIS10</strong> no balcão.</span>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 

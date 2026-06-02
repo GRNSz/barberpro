@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 
 const AuthContext = createContext();
 
@@ -37,47 +37,97 @@ const MOCK_USERS = {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [userType, setUserType] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // Default to loading while checking session
 
-  const loginAsClient = useCallback(() => {
-    setLoading(true);
-    setTimeout(() => {
-      setUser(MOCK_USERS.client);
-      setUserType('client');
-      setLoading(false);
-    }, 500);
-  }, []);
-
-  const loginAsBarber = useCallback(() => {
-    setLoading(true);
-    setTimeout(() => {
-      setUser(MOCK_USERS.barber);
-      setUserType('barber');
-      setLoading(false);
-    }, 500);
-  }, []);
-
-  const loginWithEmail = useCallback((email, password, type) => {
-    setLoading(true);
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const mockUser = MOCK_USERS[type] || MOCK_USERS.client;
-        setUser({ ...mockUser, email });
-        setUserType(type);
+  // Check active session on mount (cookie verification)
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const res = await fetch('/api/auth/session');
+        if (res.ok) {
+          const data = await res.json();
+          setUser(data.user);
+          setUserType(data.userType);
+        }
+      } catch (err) {
+        console.warn("Nenhuma sessão ativa encontrada.");
+      } finally {
         setLoading(false);
-        resolve();
-      }, 800);
-    });
+      }
+    };
+    checkSession();
+  }, []);
+
+  const loginAsClient = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'carlos@email.com', role: 'client' })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setUser(data.user);
+        setUserType(data.userType);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const loginAsBarber = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'joao@barbearia.com', role: 'barber' })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setUser(data.user);
+        setUserType(data.userType);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const loginWithEmail = useCallback(async (email, password, type) => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, role: type })
+      });
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || 'Erro ao realizar login');
+      }
+      const data = await response.json();
+      setUser(data.user);
+      setUserType(data.userType);
+    } catch (err) {
+      console.error('Login error:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   const loginWithGoogle = useCallback((type) => {
     return new Promise((resolve, reject) => {
       if (!window.google) {
         console.warn("Google SDK not loaded. Falling back to mock login.");
-        const mockUser = MOCK_USERS[type] || MOCK_USERS.client;
-        setUser(mockUser);
-        setUserType(type);
-        resolve();
+        loginWithEmail(type === 'barber' ? 'joao@barbearia.com' : type === 'admin' ? 'admin@barberpro.com' : 'carlos@email.com', 'dummy', type)
+          .then(resolve)
+          .catch(reject);
         return;
       }
 
@@ -101,27 +151,26 @@ export function AuthProvider({ children }) {
                 if (!res.ok) throw new Error("Falha ao obter perfil do Google");
                 const profile = await res.json();
                 
-                const googleUser = {
-                  uid: profile.sub || 'google-user-' + Date.now(),
-                  name: profile.name || 'Usuário Google',
-                  email: profile.email,
-                  avatar: profile.picture || null,
-                  phone: '(11) 99999-9999',
-                  whatsapp: '5511999999999',
-                  address: 'Endereço sincronizado com o Google',
-                };
+                // Login at backend to set secure cookie session
+                const backendRes = await fetch('/api/auth/login', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ email: profile.email, role: type })
+                });
+
+                if (!backendRes.ok) throw new Error("Falha ao registrar sessão no backend");
+                const backendData = await backendRes.json();
                 
-                setUser(googleUser);
-                setUserType(type);
+                setUser(backendData.user);
+                setUserType(backendData.userType);
                 setLoading(false);
                 resolve();
               } catch (err) {
-                console.error("Google userinfo fetch error:", err);
-                setLoading(false);
-                const mockUser = MOCK_USERS[type] || MOCK_USERS.client;
-                setUser(mockUser);
-                setUserType(type);
-                resolve();
+                console.error("Google login backend sync error, falling back to mock:", err);
+                // Fallback to email login
+                loginWithEmail(type === 'barber' ? 'joao@barbearia.com' : type === 'admin' ? 'admin@barberpro.com' : 'carlos@email.com', 'dummy', type)
+                  .then(resolve)
+                  .catch(reject);
               }
             } else {
               setLoading(false);
@@ -137,26 +186,34 @@ export function AuthProvider({ children }) {
         client.requestAccessToken();
       } catch (err) {
         console.error("GIS init client error:", err);
-        setLoading(false);
-        const mockUser = MOCK_USERS[type] || MOCK_USERS.client;
-        setUser(mockUser);
-        setUserType(type);
-        resolve();
+        loginWithEmail(type === 'barber' ? 'joao@barbearia.com' : type === 'admin' ? 'admin@barberpro.com' : 'carlos@email.com', 'dummy', type)
+          .then(resolve)
+          .catch(reject);
       }
     });
-  }, []);
+  }, [loginWithEmail]);
 
-  const register = useCallback((name, email, password, type) => {
+  const register = useCallback(async (name, email, password, type) => {
     setLoading(true);
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const base = MOCK_USERS[type] || MOCK_USERS.client;
-        setUser({ ...base, uid: 'new-user', name, email });
-        setUserType(type);
-        setLoading(false);
-        resolve();
-      }, 800);
-    });
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password, role: type })
+      });
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || 'Erro ao registrar usuário');
+      }
+      const data = await response.json();
+      setUser(data.user);
+      setUserType(data.userType);
+    } catch (err) {
+      console.error(err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   const updateProfile = useCallback((data) => {
@@ -180,9 +237,18 @@ export function AuthProvider({ children }) {
     });
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    setLoading(true);
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (err) {
+      console.error('Logout error on server:', err);
+    }
     setUser(null);
     setUserType(null);
+    localStorage.removeItem('barberpro_google_access_token');
+    localStorage.removeItem('barberpro_google_calendar_synced');
+    setLoading(false);
   }, []);
 
   return (

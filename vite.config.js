@@ -9,5 +9,13 @@ export default defineConfig({
     'process.platform': JSON.stringify('browser'),
     'process.version': JSON.stringify(''),
   },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+      }
+    }
+  }
 })
 

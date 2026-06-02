@@ -1,11 +1,69 @@
 version: '3.8'
 
 services:
-  barberpro:
+  # 1. Banco Relacional PostgreSQL
+  db:
+    image: postgres:16-alpine
+    container_name: barberpro-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: barberpro
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          memory: 120M
+        reservations:
+          memory: 50M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d barberpro"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 2. Servidor Backend Node/Express
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: barberpro-backend
+    restart: always
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/barberpro
+      JWT_SECRET: barberpro_jwt_secret_key_999
+      BI_TOKEN: barberpro_default_bi_secret_token_123
+      CLIENT_ORIGIN: http://localhost
+    depends_on:
+      db:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 80M
+        reservations:
+          memory: 30M
+
+  # 3. Frontend Web Nginx
+  frontend:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: barberpro-app
+    container_name: barberpro-frontend
     ports:
       - "80:80"
-    restart: unless-stopped
+    restart: always
+    depends_on:
+      - backend
+    deploy:
+      resources:
+        limits:
+          memory: 30M
+        reservations:
+          memory: 10M
+
+volumes:
+  pgdata:
+    driver: local

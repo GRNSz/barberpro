@@ -29,7 +29,7 @@ const addEventToGoogleCalendar = async (appointment, token) => {
       },
       body: JSON.stringify({
         summary: `💈 BarberPro — ${appointment.service}`,
-        description: `Agendamento de ${appointment.service} na barbearia ${appointment.barbershopName}.\nStatus: ${appointment.status}\nNotas do Cliente: ${appointment.clientNotes || ''}\nNotas do Barbeiro: ${appointment.barberNotes || ''}`,
+        description: `Agendamento de ${appointment.service} na barbearia ${appointment.barbershopName || appointment.barbershop_name}.\nStatus: ${appointment.status}\nNotas do Cliente: ${appointment.clientNotes || appointment.client_notes || ''}\nNotas do Barbeiro: ${appointment.barberNotes || appointment.barber_notes || ''}`,
         start: {
           dateTime: startDateTime.toISOString(),
           timeZone: 'America/Sao_Paulo'
@@ -55,12 +55,11 @@ const addEventToGoogleCalendar = async (appointment, token) => {
 export function DataProvider({ children }) {
   const { user, userType } = useAuth();
 
-  // Load from localStorage or fallback to mocks
-  const [appointments, setAppointments] = useState(() => {
-    const saved = localStorage.getItem('barberpro_appointments');
-    return saved ? JSON.parse(saved) : MOCK_APPOINTMENTS;
-  });
+  // Load from postgres API in full-stack mode, default to empty list while loading
+  const [appointments, setAppointments] = useState([]);
+  const [loyaltyCuts, setLoyaltyCuts] = useState(0);
 
+  // Other components stay in localStorage for fast UX
   const [notifications, setNotifications] = useState(() => {
     const saved = localStorage.getItem('barberpro_notifications');
     return saved ? JSON.parse(saved) : MOCK_NOTIFICATIONS;
@@ -81,11 +80,48 @@ export function DataProvider({ children }) {
     return saved ? JSON.parse(saved) : [];
   });
 
-  // Sync state to localStorage on changes
-  useEffect(() => {
-    localStorage.setItem('barberpro_appointments', JSON.stringify(appointments));
-  }, [appointments]);
+  const [googleCalendarSynced, setGoogleCalendarSynced] = useState(() => {
+    return localStorage.getItem('barberpro_google_calendar_synced') === 'true';
+  });
 
+  // Fetch appointments from PostgreSQL backend
+  const fetchAppointments = useCallback(async () => {
+    try {
+      const res = await fetch('/api/appointments');
+      if (res.ok) {
+        const data = await res.json();
+        setAppointments(data);
+      }
+    } catch (err) {
+      console.error("Error loading appointments from server:", err);
+    }
+  }, []);
+
+  // Fetch loyalty stamp count from PostgreSQL
+  const fetchLoyaltyCuts = useCallback(async (clientId) => {
+    if (!clientId) return;
+    try {
+      const res = await fetch(`/api/appointments/loyalty/${clientId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setLoyaltyCuts(data.cuts_count);
+      }
+    } catch (err) {
+      console.error("Error fetching loyalty cuts count:", err);
+    }
+  }, []);
+
+  // Fetch data on login/init
+  useEffect(() => {
+    if (user) {
+      fetchAppointments();
+      if (userType === 'client') {
+        fetchLoyaltyCuts(user.uid);
+      }
+    }
+  }, [user, userType, fetchAppointments, fetchLoyaltyCuts]);
+
+  // Sync state to localStorage on changes (for chats / notifications / favorites)
   useEffect(() => {
     localStorage.setItem('barberpro_notifications', JSON.stringify(notifications));
   }, [notifications]);
@@ -102,12 +138,9 @@ export function DataProvider({ children }) {
     localStorage.setItem('barberpro_favorites', JSON.stringify(favorites));
   }, [favorites]);
 
-  // Real-time synchronization between browser tabs
+  // Real-time synchronization between browser tabs for local state
   useEffect(() => {
     const handleStorageChange = (e) => {
-      if (e.key === 'barberpro_appointments' && e.newValue) {
-        setAppointments(JSON.parse(e.newValue));
-      }
       if (e.key === 'barberpro_notifications' && e.newValue) {
         setNotifications(JSON.parse(e.newValue));
       }
@@ -127,224 +160,269 @@ export function DataProvider({ children }) {
   }, []);
 
   // Client creates an appointment
-  const addAppointment = useCallback((barbershop, service, date, time, notes = '') => {
+  const addAppointment = useCallback(async (barbershop, service, date, time, notes = '') => {
     if (!user) return null;
+    const googleToken = localStorage.getItem('barberpro_google_access_token');
 
-    const newAptId = `apt-${Date.now()}`;
-    const synced = localStorage.getItem('barberpro_google_calendar_synced') === 'true';
-    const token = localStorage.getItem('barberpro_google_access_token');
+    try {
+      const response = await fetch('/api/appointments/new', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(googleToken ? { 'Google-Access-Token': googleToken } : {})
+        },
+        body: JSON.stringify({
+          barbershopId: barbershop.id,
+          barbershopName: barbershop.name,
+          service: service.name,
+          serviceId: service.id,
+          date,
+          time,
+          price: service.price,
+          notes,
+          clientId: user.uid,
+          clientName: user.name
+        })
+      });
 
-    const newApt = {
-      id: newAptId,
-      clientId: user.uid || 'client-001',
-      clientName: user.name || 'Carlos Silva',
-      clientAvatar: user.avatar || null,
-      service: service.name,
-      serviceId: service.id,
-      barbershopId: barbershop.id,
-      barbershopName: barbershop.name,
-      date,
-      time,
-      status: 'pendente',
-      price: service.price,
-      notes,
-      googleSynced: synced && !!token,
-    };
+      if (!response.ok) throw new Error("Falha ao agendar corte no servidor relacional");
+      const data = await response.json();
+      
+      const formatted = {
+        id: data.id,
+        clientId: data.client_id,
+        clientName: data.client_name,
+        clientAvatar: data.client_avatar,
+        service: data.service,
+        serviceId: data.service_id,
+        barbershopId: data.barbershop_id,
+        barbershopName: data.barbershop_name,
+        date: data.date.split('T')[0],
+        time: data.time.slice(0, 5),
+        status: data.status,
+        price: parseFloat(data.price),
+        clientNotes: data.client_notes,
+        barberNotes: data.barber_notes,
+        googleSynced: data.google_synced
+      };
 
-    // If Google Calendar Sync is active and we have a token, push to Calendar API
-    if (synced && token) {
-      addEventToGoogleCalendar(newApt, token);
+      setAppointments((prev) => [formatted, ...prev]);
+
+      // Create notification for barber
+      const newNotif = {
+        id: `notif-${Date.now()}`,
+        type: 'new_appointment',
+        title: 'Novo Agendamento',
+        message: `${formatted.clientName} agendou ${formatted.service} para ${date.split('-').reverse().join('/')} às ${time}`,
+        timestamp: new Date().toISOString(),
+        read: false,
+      };
+      setNotifications((prev) => [newNotif, ...prev]);
+
+      // Trigger chat message simulation
+      setConversations((prevConvs) => {
+        const exists = prevConvs.some((c) => c.clientId === formatted.clientId);
+        const lastMsg = `Agendou ${formatted.service} para o dia ${date.split('-').reverse().join('/')} às ${time}`;
+        if (exists) {
+          return prevConvs.map((c) =>
+            c.clientId === formatted.clientId
+              ? { ...c, lastMessage: lastMsg, lastMessageTime: new Date().toISOString() }
+              : c
+          );
+        } else {
+          return [
+            {
+              id: `conv-${Date.now()}`,
+              clientId: formatted.clientId,
+              clientName: formatted.clientName,
+              clientAvatar: formatted.clientAvatar,
+              lastMessage: lastMsg,
+              lastMessageTime: new Date().toISOString(),
+              unreadCount: 1,
+            },
+            ...prevConvs,
+          ];
+        }
+      });
+
+      return formatted;
+    } catch (err) {
+      console.error(err);
+      return null;
     }
-
-    // Update appointments
-    setAppointments((prev) => [newApt, ...prev]);
-
-    // Create notification for barber/barbershop
-    const newNotif = {
-      id: `notif-${Date.now()}`,
-      type: 'new_appointment',
-      title: 'Novo Agendamento',
-      message: `${newApt.clientName} agendou ${newApt.service} para ${date.split('-').reverse().join('/')} às ${time}`,
-      timestamp: new Date().toISOString(),
-      read: false,
-    };
-    setNotifications((prev) => [newNotif, ...prev]);
-
-    // Ensure conversation exists between client and barber
-    setConversations((prevConvs) => {
-      const exists = prevConvs.some((c) => c.clientId === newApt.clientId);
-      if (exists) {
-        return prevConvs.map((c) =>
-          c.clientId === newApt.clientId
-            ? {
-                ...c,
-                lastMessage: `Agendou ${newApt.service} para o dia ${date.split('-').reverse().join('/')} às ${time}`,
-                lastMessageTime: new Date().toISOString(),
-              }
-            : c
-        );
-      } else {
-        return [
-          {
-            id: `conv-${Date.now()}`,
-            clientId: newApt.clientId,
-            clientName: newApt.clientName,
-            clientAvatar: newApt.clientAvatar,
-            lastMessage: `Agendou ${newApt.service} para o dia ${date.split('-').reverse().join('/')} às ${time}`,
-            lastMessageTime: new Date().toISOString(),
-            unreadCount: 1,
-          },
-          ...prevConvs,
-        ];
-      }
-    });
-
-    return newApt;
   }, [user]);
 
   // Barber confirms appointment
-  const confirmAppointment = useCallback((appointmentId) => {
-    setAppointments((prev) =>
-      prev.map((a) => {
-        if (a.id === appointmentId) {
-          const updated = { ...a, status: 'confirmado' };
-          const synced = localStorage.getItem('barberpro_google_calendar_synced') === 'true';
-          const token = localStorage.getItem('barberpro_google_access_token');
-          if (synced && token) {
-            addEventToGoogleCalendar(updated, token);
-            updated.googleSynced = true;
-          }
-          return updated;
-        }
-        return a;
-      })
-    );
-
-    const apt = appointments.find((a) => a.id === appointmentId);
-    if (!apt) return;
-
-    // Create notification for client
-    const newNotif = {
-      id: `notif-${Date.now()}`,
-      type: 'message',
-      title: 'Agendamento Confirmado',
-      message: `Seu agendamento para ${apt.service} na ${apt.barbershopName} foi aceito!`,
-      timestamp: new Date().toISOString(),
-      read: false,
-    };
-    setNotifications((prev) => [newNotif, ...prev]);
-
-    // Send a message in the chat
-    const messageText = `Olá ${apt.clientName}! Confirmamos o seu agendamento para o dia ${apt.date.split('-').reverse().join('/')} às ${apt.time} (${apt.service}). Te esperamos lá! 💈`;
+  const confirmAppointment = useCallback(async (appointmentId) => {
+    const googleToken = localStorage.getItem('barberpro_google_access_token');
     
-    // Find conversation ID
-    let conv = conversations.find((c) => c.clientId === apt.clientId);
-    const convId = conv ? conv.id : `conv-${Date.now()}`;
+    try {
+      const response = await fetch(`/api/appointments/confirm/${appointmentId}`, {
+        method: 'POST',
+        headers: {
+          ...(googleToken ? { 'Google-Access-Token': googleToken } : {})
+        }
+      });
 
-    if (!conv) {
-      setConversations((prev) => [
-        {
-          id: convId,
-          clientId: apt.clientId,
-          clientName: apt.clientName,
-          clientAvatar: apt.clientAvatar,
-          lastMessage: messageText,
-          lastMessageTime: new Date().toISOString(),
-          unreadCount: 1,
-        },
-        ...prev,
-      ]);
-    } else {
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === convId
-            ? { ...c, lastMessage: messageText, lastMessageTime: new Date().toISOString() }
-            : c
-        )
+      if (!response.ok) throw new Error("Erro ao confirmar agendamento");
+      
+      setAppointments((prev) =>
+        prev.map((a) => (a.id === appointmentId ? { ...a, status: 'confirmado' } : a))
       );
+
+      const apt = appointments.find((a) => a.id === appointmentId);
+      if (!apt) return;
+
+      // Create notification for client
+      const newNotif = {
+        id: `notif-${Date.now()}`,
+        type: 'message',
+        title: 'Agendamento Confirmado',
+        message: `Seu agendamento para ${apt.service} na ${apt.barbershopName} foi aceito!`,
+        timestamp: new Date().toISOString(),
+        read: false,
+      };
+      setNotifications((prev) => [newNotif, ...prev]);
+
+      // Send chat confirmation
+      const messageText = `Olá ${apt.clientName}! Confirmamos o seu agendamento para o dia ${apt.date.split('-').reverse().join('/')} às ${apt.time} (${apt.service}). Te esperamos lá! 💈`;
+      let conv = conversations.find((c) => c.clientId === apt.clientId);
+      const convId = conv ? conv.id : `conv-${Date.now()}`;
+
+      setConversations((prev) => {
+        if (!conv) {
+          return [
+            {
+              id: convId,
+              clientId: apt.clientId,
+              clientName: apt.clientName,
+              clientAvatar: apt.clientAvatar,
+              lastMessage: messageText,
+              lastMessageTime: new Date().toISOString(),
+              unreadCount: 1,
+            },
+            ...prev,
+          ];
+        } else {
+          return prev.map((c) =>
+            c.id === convId ? { ...c, lastMessage: messageText, lastMessageTime: new Date().toISOString() } : c
+          );
+        }
+      });
+
+      const newMsg = {
+        id: `msg-${Date.now()}`,
+        senderId: 'barber-001',
+        senderName: apt.barbershopName,
+        text: messageText,
+        timestamp: new Date().toISOString(),
+        read: false,
+      };
+
+      setMessages((prev) => ({
+        ...prev,
+        [convId]: [...(prev[convId] || []), newMsg],
+      }));
+    } catch (err) {
+      console.error(err);
     }
-
-    const newMsg = {
-      id: `msg-${Date.now()}`,
-      senderId: 'barber-001',
-      senderName: apt.barbershopName,
-      text: messageText,
-      timestamp: new Date().toISOString(),
-      read: false,
-    };
-
-    setMessages((prev) => ({
-      ...prev,
-      [convId]: [...(prev[convId] || []), newMsg],
-    }));
   }, [appointments, conversations]);
 
-  // Cancel appointment (can be done by client or barber)
-  const cancelAppointment = useCallback((appointmentId, role) => {
-    setAppointments((prev) =>
-      prev.map((a) => (a.id === appointmentId ? { ...a, status: 'cancelado' } : a))
-    );
+  // Complete appointment (Triggers loyalty count refetch)
+  const completeAppointment = useCallback(async (appointmentId) => {
+    try {
+      const response = await fetch(`/api/appointments/complete/${appointmentId}`, {
+        method: 'POST'
+      });
 
-    const apt = appointments.find((a) => a.id === appointmentId);
-    if (!apt) return;
+      if (!response.ok) throw new Error("Erro ao concluir agendamento");
 
-    // Create notification
-    const newNotif = {
-      id: `notif-${Date.now()}`,
-      type: 'cancelled',
-      title: 'Agendamento Cancelado',
-      message: role === 'barber'
-        ? `O barbeiro cancelou o horário de ${apt.date.split('-').reverse().join('/')} às ${apt.time}`
-        : `${apt.clientName} cancelou o horário de ${apt.date.split('-').reverse().join('/')} às ${apt.time}`,
-      timestamp: new Date().toISOString(),
-      read: false,
-    };
-    setNotifications((prev) => [newNotif, ...prev]);
-
-    // Send a message in the chat
-    const messageText = role === 'barber'
-      ? `Aviso: Seu agendamento para o dia ${apt.date.split('-').reverse().join('/')} às ${apt.time} precisou ser cancelado.`
-      : `Olá! Cancelei meu agendamento de ${apt.date.split('-').reverse().join('/')} às ${apt.time}.`;
-
-    let conv = conversations.find((c) => c.clientId === apt.clientId);
-    const convId = conv ? conv.id : `conv-${Date.now()}`;
-
-    if (!conv) {
-      setConversations((prev) => [
-        {
-          id: convId,
-          clientId: apt.clientId,
-          clientName: apt.clientName,
-          clientAvatar: apt.clientAvatar,
-          lastMessage: messageText,
-          lastMessageTime: new Date().toISOString(),
-          unreadCount: 1,
-        },
-        ...prev,
-      ]);
-    } else {
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === convId
-            ? { ...c, lastMessage: messageText, lastMessageTime: new Date().toISOString() }
-            : c
-        )
+      setAppointments((prev) =>
+        prev.map((a) => (a.id === appointmentId ? { ...a, status: 'concluído' } : a))
       );
+
+      const apt = appointments.find((a) => a.id === appointmentId);
+      if (apt) {
+        fetchLoyaltyCuts(apt.clientId);
+      }
+    } catch (err) {
+      console.error(err);
     }
+  }, [appointments, fetchLoyaltyCuts]);
 
-    const newMsg = {
-      id: `msg-${Date.now()}`,
-      senderId: role === 'barber' ? 'barber-001' : apt.clientId,
-      senderName: role === 'barber' ? apt.barbershopName : apt.clientName,
-      text: messageText,
-      timestamp: new Date().toISOString(),
-      read: false,
-    };
+  // Cancel appointment (can be done by client or barber)
+  const cancelAppointment = useCallback(async (appointmentId, role) => {
+    try {
+      const response = await fetch(`/api/appointments/cancel/${appointmentId}`, {
+        method: 'POST'
+      });
 
-    setMessages((prev) => ({
-      ...prev,
-      [convId]: [...(prev[convId] || []), newMsg],
-    }));
+      if (!response.ok) throw new Error("Erro ao cancelar agendamento");
+
+      setAppointments((prev) =>
+        prev.map((a) => (a.id === appointmentId ? { ...a, status: 'cancelado' } : a))
+      );
+
+      const apt = appointments.find((a) => a.id === appointmentId);
+      if (!apt) return;
+
+      const newNotif = {
+        id: `notif-${Date.now()}`,
+        type: 'cancelled',
+        title: 'Agendamento Cancelado',
+        message: role === 'barber'
+          ? `O barbeiro cancelou o horário de ${apt.date.split('-').reverse().join('/')} às ${apt.time}`
+          : `${apt.clientName} cancelou o horário de ${apt.date.split('-').reverse().join('/')} às ${apt.time}`,
+        timestamp: new Date().toISOString(),
+        read: false,
+      };
+      setNotifications((prev) => [newNotif, ...prev]);
+
+      // Chat log
+      const messageText = role === 'barber'
+        ? `Aviso: Seu agendamento para o dia ${apt.date.split('-').reverse().join('/')} às ${apt.time} precisou ser cancelado.`
+        : `Olá! Cancelei meu agendamento de ${apt.date.split('-').reverse().join('/')} às ${apt.time}.`;
+
+      let conv = conversations.find((c) => c.clientId === apt.clientId);
+      const convId = conv ? conv.id : `conv-${Date.now()}`;
+
+      setConversations((prev) => {
+        if (!conv) {
+          return [
+            {
+              id: convId,
+              clientId: apt.clientId,
+              clientName: apt.clientName,
+              clientAvatar: apt.clientAvatar,
+              lastMessage: messageText,
+              lastMessageTime: new Date().toISOString(),
+              unreadCount: 1,
+            },
+            ...prev,
+          ];
+        } else {
+          return prev.map((c) =>
+            c.id === convId ? { ...c, lastMessage: messageText, lastMessageTime: new Date().toISOString() } : c
+          );
+        }
+      });
+
+      const newMsg = {
+        id: `msg-${Date.now()}`,
+        senderId: role === 'barber' ? 'barber-001' : apt.clientId,
+        senderName: role === 'barber' ? apt.barbershopName : apt.clientName,
+        text: messageText,
+        timestamp: new Date().toISOString(),
+        read: false,
+      };
+
+      setMessages((prev) => ({
+        ...prev,
+        [convId]: [...(prev[convId] || []), newMsg],
+      }));
+    } catch (err) {
+      console.error(err);
+    }
   }, [appointments, conversations]);
 
   // Toggle favorite barbershop
@@ -375,13 +453,7 @@ export function DataProvider({ children }) {
 
     setConversations((prev) =>
       prev.map((c) =>
-        c.id === convId
-          ? {
-              ...c,
-              lastMessage: text,
-              lastMessageTime: new Date().toISOString(),
-            }
-          : c
+        c.id === convId ? { ...c, lastMessage: text, lastMessageTime: new Date().toISOString() } : c
       )
     );
   }, []);
@@ -390,11 +462,7 @@ export function DataProvider({ children }) {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   }, []);
 
-  // Google Calendar Sync
-  const [googleCalendarSynced, setGoogleCalendarSynced] = useState(() => {
-    return localStorage.getItem('barberpro_google_calendar_synced') === 'true';
-  });
-
+  // Google Calendar Sync API Flow
   const syncGoogleCalendar = useCallback(() => {
     return new Promise((resolve, reject) => {
       const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '1013727976868-dummyid.apps.googleusercontent.com';
@@ -420,11 +488,16 @@ export function DataProvider({ children }) {
               setGoogleCalendarSynced(true);
               localStorage.setItem('barberpro_google_calendar_synced', 'true');
               
-              // Trigger sync for all existing client appointments
+              // Push all existing unsynced appointments for this client in the DB
               setAppointments((prev) => {
                 const updated = prev.map((a) => {
                   if (a.clientId === (user?.uid || 'client-001')) {
                     addEventToGoogleCalendar(a, tokenResponse.access_token);
+                    // Update database synced status in background
+                    fetch(`/api/appointments/confirm/${a.id}`, {
+                      method: 'POST',
+                      headers: { 'Google-Access-Token': tokenResponse.access_token }
+                    });
                     return { ...a, googleSynced: true };
                   }
                   return a;
@@ -454,20 +527,29 @@ export function DataProvider({ children }) {
     });
   }, [user]);
 
-  // Update notes on appointments
-  const updateAppointmentNotes = useCallback((appointmentId, notes, role) => {
-    setAppointments((prev) =>
-      prev.map((a) => {
-        if (a.id === appointmentId) {
-          if (role === 'barber') {
-            return { ...a, barberNotes: notes };
-          } else {
-            return { ...a, clientNotes: notes };
-          }
-        }
-        return a;
-      })
-    );
+  // Update notes on appointments (Backend persistent)
+  const updateAppointmentNotes = useCallback(async (appointmentId, notes, role) => {
+    try {
+      const response = await fetch(`/api/appointments/notes/${appointmentId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes, role })
+      });
+      if (response.ok) {
+        setAppointments((prev) =>
+          prev.map((a) => {
+            if (a.id === appointmentId) {
+              return role === 'barber'
+                ? { ...a, barberNotes: notes }
+                : { ...a, clientNotes: notes };
+            }
+            return a;
+          })
+        );
+      }
+    } catch (err) {
+      console.error("Error saving notes on server:", err);
+    }
   }, []);
 
   return (
@@ -479,14 +561,17 @@ export function DataProvider({ children }) {
         messages,
         favorites,
         googleCalendarSynced,
+        loyaltyCuts,
         addAppointment,
         confirmAppointment,
+        completeAppointment,
         cancelAppointment,
         toggleFavorite,
         addMessage,
         markNotificationsAsRead,
         syncGoogleCalendar,
         updateAppointmentNotes,
+        fetchLoyaltyCuts
       }}
     >
       {children}
