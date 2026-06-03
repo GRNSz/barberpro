@@ -23,27 +23,39 @@ const allowedOrigins = [
   'https://localhost'
 ];
 
-app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl)
-    if (!origin) {
-      callback(null, true);
-      return;
-    }
+app.use(cors((req, callback) => {
+  const origin = req.header('Origin');
+  const corsOptions = { credentials: true };
 
-    // Check if origin is localhost (http or https) or matches allowedOrigins
-    const isLocalhost = origin.startsWith('http://localhost') || 
-                        origin.startsWith('https://localhost') || 
-                        origin.startsWith('http://127.0.0.1') || 
-                        origin.startsWith('https://127.0.0.1');
+  if (!origin) {
+    corsOptions.origin = true;
+    callback(null, corsOptions);
+    return;
+  }
 
-    if (allowedOrigins.indexOf(origin) !== -1 || isLocalhost) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true
+  // Check if origin is localhost (http or https) or matches allowedOrigins
+  const isLocalhost = origin.startsWith('http://localhost') || 
+                      origin.startsWith('https://localhost') || 
+                      origin.startsWith('http://127.0.0.1') || 
+                      origin.startsWith('https://127.0.0.1');
+
+  // Check if origin is the same host (when running behind proxy)
+  let originHost = '';
+  try {
+    originHost = new URL(origin).host;
+  } catch (e) {}
+
+  const hostHeader = req.headers.host;
+  const xForwardedHost = req.headers['x-forwarded-host'];
+  const isSameHost = originHost && (originHost === hostHeader || originHost === xForwardedHost);
+
+  if (allowedOrigins.indexOf(origin) !== -1 || isLocalhost || isSameHost) {
+    corsOptions.origin = true;
+  } else {
+    corsOptions.origin = false;
+  }
+
+  callback(null, corsOptions);
 }));
 
 app.use(express.json());
