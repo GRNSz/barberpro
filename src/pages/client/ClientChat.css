@@ -12,11 +12,12 @@
 
 @media (max-width: 768px) {
   .client-chat {
-    height: calc(100dvh - 72px);
+    height: calc(100dvh - 56px - 60px - env(safe-area-inset-bottom));
     margin: calc(-1 * var(--space-md));
     margin-top: calc(-1 * var(--space-md));
   }
 }
+
 
 /* ---------- Chat Header ---------- */
 .chat-header {

@@ -18,13 +18,26 @@ const PORT = process.env.PORT || 5000;
 const allowedOrigins = [
   process.env.CLIENT_ORIGIN || 'http://localhost:5173',
   'http://localhost:80',
-  'http://localhost'
+  'http://localhost',
+  'https://localhost:443',
+  'https://localhost'
 ];
 
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps or curl)
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+
+    // Check if origin is localhost (http or https) or matches allowedOrigins
+    const isLocalhost = origin.startsWith('http://localhost') || 
+                        origin.startsWith('https://localhost') || 
+                        origin.startsWith('http://127.0.0.1') || 
+                        origin.startsWith('https://127.0.0.1');
+
+    if (allowedOrigins.indexOf(origin) !== -1 || isLocalhost) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));

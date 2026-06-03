@@ -42,9 +42,16 @@ button {
 
 input, textarea, select {
   font-family: inherit;
-  font-size: inherit;
+  font-size: inherit; /* overridden below for mobile */
   border: none;
   outline: none;
+}
+
+/* Prevent iOS auto-zoom on focus (must be >= 16px) */
+@media (max-width: 768px) {
+  input, textarea, select {
+    font-size: 16px !important;
+  }
 }
 
 ul, ol {
@@ -226,8 +233,18 @@ body {
 @media (max-width: 768px) {
   .main-content {
     padding: var(--space-md);
-    padding-top: 72px;
+    padding-top: 68px;
     padding-bottom: 80px;
+    /* iOS safe area bottom */
+    padding-bottom: calc(80px + env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 480px) {
+  .main-content {
+    padding: var(--space-sm);
+    padding-top: 68px;
+    padding-bottom: calc(80px + env(safe-area-inset-bottom));
   }
 }
 
@@ -268,6 +285,9 @@ body {
   white-space: nowrap;
   position: relative;
   overflow: hidden;
+  /* WCAG minimum touch target */
+  min-height: 44px;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .btn::after {
@@ -548,9 +568,21 @@ body {
   gap: var(--space-md);
 }
 
-@media (max-width: 768px) {
-  .grid-2, .grid-3, .grid-4 {
+/* Small mobile (320px-480px) */
+@media (max-width: 480px) {
+  .grid-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-sm);
+  }
+  .grid-3, .grid-4 {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Standard mobile (480px-768px) */
+@media (min-width: 481px) and (max-width: 768px) {
+  .grid-3, .grid-4 {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
@@ -722,6 +754,21 @@ body {
   min-width: 280px;
 }
 
+/* Toast on mobile goes to the bottom center */
+@media (max-width: 768px) {
+  .toast-container {
+    top: auto;
+    bottom: calc(72px + var(--space-md));
+    left: var(--space-md);
+    right: var(--space-md);
+  }
+  .toast {
+    min-width: 0;
+    width: 100%;
+    animation: fadeInUp 0.3s ease;
+  }
+}
+
 /* ---------- Mobile Bottom Nav ---------- */
 .bottom-nav {
   display: none;
@@ -799,6 +846,36 @@ body {
   overflow-y: auto;
   box-shadow: var(--shadow-xl);
   animation: scaleIn 0.3s ease;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Mobile: modal becomes a bottom sheet */
+@media (max-width: 768px) {
+  .modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .modal {
+    max-width: 100%;
+    width: 100%;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    max-height: 92dvh;
+    padding: var(--space-lg);
+    padding-bottom: calc(var(--space-lg) + env(safe-area-inset-bottom));
+    animation: slideInFromBottom 0.35s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+  }
+}
+
+@keyframes slideInFromBottom {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .modal-header {

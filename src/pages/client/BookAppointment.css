@@ -482,21 +482,55 @@
   .booking-summary-bar {
     flex-direction: column;
     padding: var(--space-md);
+    padding-bottom: calc(var(--space-md) + env(safe-area-inset-bottom));
+    /* Sit above the bottom nav */
+    bottom: 60px;
   }
 
   .booking-summary-info {
     width: 100%;
+    justify-content: space-between;
   }
 
   .booking-summary-bar .btn {
     width: 100%;
+    min-height: 48px;
   }
 
   .steps-track {
-    gap: var(--space-lg);
+    gap: var(--space-md);
+  }
+
+  .step-label {
+    font-size: 0.625rem;
   }
 
   .time-slots-grid {
     grid-template-columns: repeat(3, 1fr);
   }
+
+  .booking-step-title {
+    font-size: 1.25rem;
+  }
+
+  .date-chip {
+    min-width: 62px;
+    padding: var(--space-sm);
+  }
+
+  .date-chip-day {
+    font-size: 1.25rem;
+  }
 }
+
+@media (min-width: 481px) and (max-width: 768px) {
+  .booking-summary-bar {
+    bottom: 60px;
+    padding-bottom: calc(var(--space-md) + env(safe-area-inset-bottom));
+  }
+
+  .time-slots-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+

@@ -67,7 +67,7 @@ services:
     environment:
       - DOMAIN=${DOMAIN:-localhost}
     volumes:
-      - certs:/etc/letsencrypt
+      - ./local-certs:/etc/letsencrypt/live/localhost
       - challenge:/var/www/certbot
     depends_on:
       - backend

@@ -15,9 +15,11 @@
   .barber-chat {
     margin: calc(-1 * var(--space-md));
     margin-top: 0;
-    height: calc(100dvh - 72px);
+    /* Account for top navbar (56px) + bottom nav (60px) + safe area */
+    height: calc(100dvh - 56px - 60px - env(safe-area-inset-bottom));
   }
 }
+
 
 /* ---------- Sidebar (Conversations) ---------- */
 .chat-sidebar {

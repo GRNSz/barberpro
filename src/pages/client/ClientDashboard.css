@@ -291,7 +291,7 @@
   border: 1px solid rgba(200, 169, 110, 0.2);
 }
 
-@media (max-width: 768px) {
+@media (max-width: 480px) {
   .quick-actions {
     grid-template-columns: 1fr;
   }
@@ -299,22 +299,39 @@
   .quick-action-card {
     flex-direction: row;
     text-align: left;
-    padding: var(--space-lg);
+    padding: var(--space-md);
+    min-height: 72px;
   }
 
   .quick-action-icon {
-    width: 48px;
-    height: 48px;
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
   }
 
   .dashboard-welcome {
-    padding: var(--space-lg);
+    padding: var(--space-md);
+    flex-direction: column;
+    gap: var(--space-sm);
+    align-items: flex-start;
   }
 
   .welcome-name {
-    font-size: 1.5rem;
+    font-size: 1.375rem;
   }
 }
+
+@media (min-width: 481px) and (max-width: 768px) {
+  .quick-actions {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .quick-action-card {
+    flex-direction: column;
+    padding: var(--space-lg) var(--space-md);
+  }
+}
+
 
 /* ---------- Promo Grid Section ---------- */
 .dashboard-promo-grid {

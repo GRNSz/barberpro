@@ -475,8 +475,8 @@ export function DataProvider({ children }) {
     return new Promise((resolve, reject) => {
       const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '1013727976868-dummyid.apps.googleusercontent.com';
       
-      if (!window.google) {
-        console.warn("Google SDK not loaded yet. Simulating sync.");
+      if (!window.google || clientId.includes('dummy') || clientId.includes('YOUR_GOOGLE_CLIENT_ID')) {
+        console.warn("Google Client ID is dummy or not configured. Simulating calendar sync.");
         setGoogleCalendarSynced(true);
         localStorage.setItem('barberpro_google_calendar_synced', 'true');
         setAppointments((prev) =>

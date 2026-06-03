@@ -123,16 +123,29 @@ export function AuthProvider({ children }) {
 
   const loginWithGoogle = useCallback((type) => {
     return new Promise((resolve, reject) => {
-      if (!window.google) {
-        console.warn("Google SDK not loaded. Falling back to mock login.");
-        loginWithEmail(type === 'barber' ? 'joao@barbearia.com' : type === 'admin' ? 'admin@barberpro.com' : 'carlos@email.com', 'dummy', type)
-          .then(resolve)
-          .catch(reject);
+      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+
+      // Check BEFORE touching the Google SDK — prevents the 401 invalid_client popup
+      const isDummy = !clientId 
+        || clientId.includes('dummy') 
+        || clientId.includes('YOUR_GOOGLE_CLIENT_ID')
+        || clientId.length < 20;
+
+      if (isDummy || !window.google) {
+        if (!isDummy) {
+          console.warn("Google SDK not loaded. Falling back to mock login.");
+        } else {
+          console.warn("Google Client ID not configured. Using simulated login.");
+        }
+        loginWithEmail(
+          type === 'barber' ? 'joao@barbearia.com' : type === 'admin' ? 'admin@barberpro.com' : 'carlos@email.com',
+          'dummy',
+          type
+        ).then(resolve).catch(reject);
         return;
       }
 
       setLoading(true);
-      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '1013727976868-dummyid.apps.googleusercontent.com';
 
       try {
         const client = window.google.accounts.oauth2.initTokenClient({
@@ -166,11 +179,12 @@ export function AuthProvider({ children }) {
                 setLoading(false);
                 resolve();
               } catch (err) {
-                console.error("Google login backend sync error, falling back to mock:", err);
-                // Fallback to email login
-                loginWithEmail(type === 'barber' ? 'joao@barbearia.com' : type === 'admin' ? 'admin@barberpro.com' : 'carlos@email.com', 'dummy', type)
-                  .then(resolve)
-                  .catch(reject);
+                console.error("Google login error, falling back to mock:", err);
+                loginWithEmail(
+                  type === 'barber' ? 'joao@barbearia.com' : type === 'admin' ? 'admin@barberpro.com' : 'carlos@email.com',
+                  'dummy',
+                  type
+                ).then(resolve).catch(reject);
               }
             } else {
               setLoading(false);
@@ -185,10 +199,12 @@ export function AuthProvider({ children }) {
         
         client.requestAccessToken();
       } catch (err) {
-        console.error("GIS init client error:", err);
-        loginWithEmail(type === 'barber' ? 'joao@barbearia.com' : type === 'admin' ? 'admin@barberpro.com' : 'carlos@email.com', 'dummy', type)
-          .then(resolve)
-          .catch(reject);
+        console.error("GIS init error:", err);
+        loginWithEmail(
+          type === 'barber' ? 'joao@barbearia.com' : type === 'admin' ? 'admin@barberpro.com' : 'carlos@email.com',
+          'dummy',
+          type
+        ).then(resolve).catch(reject);
       }
     });
   }, [loginWithEmail]);
