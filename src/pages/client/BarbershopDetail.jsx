@@ -1,19 +1,52 @@
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getBarbershopById, MOCK_SERVICES, WHATSAPP_TEMPLATES, getInitials, formatPrice } from '../../utils/mockData';
+import { WHATSAPP_TEMPLATES, getInitials, formatPrice } from '../../utils/mockData';
 import MapView from '../../components/MapView';
 import WhatsAppButton from '../../components/WhatsAppButton';
-import { Star, MapPin, Phone, Clock, ArrowLeft, Calendar, Heart } from 'lucide-react';
+import { Star, MapPin, Phone, Clock, ArrowLeft, Calendar, Heart, Loader } from 'lucide-react';
 import { useData } from '../../contexts/DataContext';
 import './BarbershopDetail.css';
 
 export default function BarbershopDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const shop = getBarbershopById(id);
   const { favorites, toggleFavorite } = useData();
   const isFav = favorites.includes(id);
 
-  if (!shop) {
+  const [shop, setShop] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchShop = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(`/api/barbershops/${id}`);
+        if (!res.ok) throw new Error('Barbearia não encontrada');
+        const data = await res.json();
+        setShop(data);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchShop();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="page-enter barbershop-detail-error">
+        <div className="empty-state">
+          <Loader size={40} style={{ animation: 'spin 1s linear infinite' }} />
+          <p style={{ marginTop: '1rem' }}>Carregando barbearia...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !shop) {
     return (
       <div className="page-enter barbershop-detail-error">
         <button className="btn-icon btn-ghost back-btn" onClick={() => navigate('/cliente/explorar')}>
@@ -30,39 +63,23 @@ export default function BarbershopDetail() {
     );
   }
 
-  // Filter services offered by this shop
-  const shopServices = MOCK_SERVICES.filter((svc) => shop.services.includes(svc.id) && svc.active);
+  const shopServices = shop.services || [];
+  const whatsappMessage = WHATSAPP_TEMPLATES.contact(shop.name);
+  const lat = parseFloat(shop.lat);
+  const lng = parseFloat(shop.lng);
+  const hasLocation = !isNaN(lat) && !isNaN(lng);
 
   const renderStars = (rating) => {
     const stars = [];
     const full = Math.floor(rating);
     const hasHalf = rating - full >= 0.5;
     for (let i = 0; i < 5; i++) {
-      if (i < full) {
-        stars.push(<Star key={i} size={16} className="star-filled" fill="#C8A96E" color="#C8A96E" />);
-      } else if (i === full && hasHalf) {
-        stars.push(<Star key={i} size={16} className="star-half" fill="#C8A96E" color="#C8A96E" />);
-      } else {
-        stars.push(<Star key={i} size={16} className="star-empty" color="#A0A0A0" />);
-      }
+      if (i < full) stars.push(<Star key={i} size={16} fill="#C8A96E" color="#C8A96E" />);
+      else if (i === full && hasHalf) stars.push(<Star key={i} size={16} fill="#C8A96E" color="#C8A96E" />);
+      else stars.push(<Star key={i} size={16} color="#A0A0A0" />);
     }
     return stars;
   };
-
-  const translateDay = (dayKey) => {
-    const days = {
-      seg: 'Segunda-feira',
-      ter: 'Terça-feira',
-      qua: 'Quarta-feira',
-      qui: 'Quinta-feira',
-      sex: 'Sexta-feira',
-      sab: 'Sábado',
-      dom: 'Domingo',
-    };
-    return days[dayKey] || dayKey;
-  };
-
-  const whatsappMessage = WHATSAPP_TEMPLATES.contact(shop.name);
 
   return (
     <div className="page-enter barbershop-detail">
@@ -93,68 +110,74 @@ export default function BarbershopDetail() {
           <div className="detail-info">
             <h1 className="detail-name">{shop.name}</h1>
             <div className="detail-rating-row">
-              <div className="stars-row">{renderStars(shop.rating)}</div>
-              <span className="rating-value">{shop.rating}</span>
-              <span className="rating-count">({shop.totalReviews} avaliações)</span>
+              <div className="stars-row">{renderStars(shop.rating || 5)}</div>
+              <span className="rating-value">{shop.rating || '5.0'}</span>
+              <span className="rating-count">({shop.total_reviews || 0} avaliações)</span>
             </div>
-            <p className="detail-desc">{shop.description}</p>
+            {shop.description && <p className="detail-desc">{shop.description}</p>}
           </div>
         </div>
       </section>
 
       {/* Map View */}
-      <section className="detail-section animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-        <h2 className="detail-section-title">Localização</h2>
-        <div className="detail-map-wrapper">
-          <MapView barbershops={[shop]} center={[shop.lat, shop.lng]} zoom={16} height="200px" />
-        </div>
-        <div className="detail-address-row">
-          <MapPin size={18} className="detail-icon" />
-          <span>{shop.address}</span>
-        </div>
-      </section>
+      {hasLocation && (
+        <section className="detail-section animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+          <h2 className="detail-section-title">Localização</h2>
+          <div className="detail-map-wrapper">
+            <MapView barbershops={[{ ...shop, lat, lng }]} center={[lat, lng]} zoom={16} height="200px" />
+          </div>
+          <div className="detail-address-row">
+            <MapPin size={18} className="detail-icon" />
+            <span>{shop.address}</span>
+          </div>
+        </section>
+      )}
+
+      {!hasLocation && shop.address && (
+        <section className="detail-section animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+          <h2 className="detail-section-title">Endereço</h2>
+          <div className="detail-address-row" style={{ padding: '1rem', background: 'var(--bg-card)', borderRadius: 'var(--radius)' }}>
+            <MapPin size={18} className="detail-icon" />
+            <span>{shop.address}</span>
+          </div>
+        </section>
+      )}
 
       {/* Services List */}
       <section className="detail-section animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
         <h2 className="detail-section-title">Serviços Disponíveis</h2>
-        <div className="detail-services stagger-children">
-          {shopServices.map((svc) => (
-            <div key={svc.id} className="detail-service-card card">
-              <div className="service-icon">{svc.icon}</div>
-              <div className="service-info">
-                <h3 className="service-name">{svc.name}</h3>
-                <span className="service-desc">{svc.description}</span>
-                <div className="service-meta">
-                  <span className="service-price">{formatPrice(svc.price)}</span>
-                  <span className="service-duration">
-                    <Clock size={12} /> {svc.duration} min
-                  </span>
+        {shopServices.length === 0 ? (
+          <div className="empty-state-mini">
+            <p className="text-small text-muted">Nenhum serviço cadastrado ainda.</p>
+          </div>
+        ) : (
+          <div className="detail-services stagger-children">
+            {shopServices.map((svc) => (
+              <div key={svc.id} className="detail-service-card card">
+                <div className="service-icon">{svc.icon || '✂️'}</div>
+                <div className="service-info">
+                  <h3 className="service-name">{svc.name}</h3>
+                  {svc.description && <span className="service-desc">{svc.description}</span>}
+                  <div className="service-meta">
+                    <span className="service-price">{formatPrice(parseFloat(svc.price))}</span>
+                    {svc.duration && (
+                      <span className="service-duration">
+                        <Clock size={12} /> {svc.duration} min
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Working Hours & Contact */}
-      <div className="detail-two-col animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
-        <section className="detail-section">
-          <h2 className="detail-section-title">Horário de Funcionamento</h2>
-          <div className="working-hours-card card">
-            {Object.entries(shop.workingHours).map(([day, hours]) => (
-              <div key={day} className="hours-row">
-                <span className="hours-day">{translateDay(day)}</span>
-                <span className={`hours-time ${!hours ? 'closed' : ''}`}>
-                  {hours ? `${hours.open} – ${hours.close}` : 'Fechado'}
-                </span>
               </div>
             ))}
           </div>
-        </section>
+        )}
+      </section>
 
-        <section className="detail-section">
-          <h2 className="detail-section-title">Contato</h2>
-          <div className="contact-card card">
+      {/* Contact */}
+      <section className="detail-section animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+        <h2 className="detail-section-title">Contato</h2>
+        <div className="contact-card card">
+          {shop.phone && (
             <div className="contact-item">
               <Phone size={18} className="detail-icon" />
               <div>
@@ -162,26 +185,21 @@ export default function BarbershopDetail() {
                 <span className="contact-value">{shop.phone}</span>
               </div>
             </div>
-            <div className="contact-item">
-              <Clock size={18} className="detail-icon" />
-              <div>
-                <span className="contact-label">PWA Oficial</span>
-                <span className="contact-value">Funcionando 24h</span>
-              </div>
-            </div>
-          </div>
-        </section>
-      </div>
+          )}
+        </div>
+      </section>
 
       {/* Bottom Sticky Action Bar */}
       <div className="detail-action-bar">
-        <WhatsAppButton
-          phone={shop.whatsapp}
-          message={whatsappMessage}
-          label="Enviar Mensagem"
-          variant="outline"
-          fullWidth={true}
-        />
+        {shop.whatsapp && (
+          <WhatsAppButton
+            phone={shop.whatsapp}
+            message={whatsappMessage}
+            label="Enviar Mensagem"
+            variant="outline"
+            fullWidth={true}
+          />
+        )}
         <button
           className="btn btn-primary btn-full btn-lg"
           onClick={() => navigate(`/cliente/agendar?barbershopId=${shop.id}`)}

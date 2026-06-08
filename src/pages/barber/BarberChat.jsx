@@ -1,5 +1,7 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
-import { MOCK_CONVERSATIONS, MOCK_MESSAGES, getInitials } from '../../utils/mockData';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
+import { useData } from '../../contexts/DataContext';
+import { getInitials } from '../../utils/mockData';
 import { formatTimeAgo } from '../../utils/helpers';
 import Navbar from '../../components/Navbar';
 import { Send, ArrowLeft, Search, MessageSquare } from 'lucide-react';
@@ -7,61 +9,66 @@ import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import './BarberChat.css';
 
-const BARBER_ID = 'barber-001';
-
 export default function BarberChat() {
+  const { user } = useAuth();
+  const { conversations, messages, subscribeToChat, addMessage } = useData();
   const [selectedConvId, setSelectedConvId] = useState(null);
-  const [messages, setMessages] = useState(() => {
-    // Deep-copy so we don't mutate the mock
-    const copy = {};
-    Object.keys(MOCK_MESSAGES).forEach((k) => {
-      copy[k] = MOCK_MESSAGES[k].map((m) => ({ ...m }));
-    });
-    return copy;
-  });
   const [newMessage, setNewMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const messagesEndRef = useRef(null);
+  const unsubscribeRef = useRef(null);
 
-  const filteredConversations = useMemo(
-    () =>
-      MOCK_CONVERSATIONS.filter((c) =>
-        c.clientName.toLowerCase().includes(searchTerm.toLowerCase())
-      ),
-    [searchTerm]
+  // Filter conversations by search
+  const filteredConversations = useMemo(() =>
+    conversations.filter(c =>
+      c.clientName?.toLowerCase().includes(searchTerm.toLowerCase())
+    ),
+    [conversations, searchTerm]
   );
 
   const selectedConv = useMemo(
-    () => MOCK_CONVERSATIONS.find((c) => c.id === selectedConvId),
-    [selectedConvId]
+    () => conversations.find(c => c.id === selectedConvId),
+    [conversations, selectedConvId]
   );
 
-  const currentMessages = selectedConvId ? messages[selectedConvId] || [] : [];
+  const currentMessages = selectedConvId ? (messages[selectedConvId] || []) : [];
 
-  // Auto-scroll when messages change
+  // Subscribe to Firebase chat messages when conversation is selected
+  useEffect(() => {
+    if (unsubscribeRef.current) {
+      unsubscribeRef.current();
+      unsubscribeRef.current = null;
+    }
+    if (selectedConvId) {
+      unsubscribeRef.current = subscribeToChat(selectedConvId);
+    }
+    return () => {
+      if (unsubscribeRef.current) unsubscribeRef.current();
+    };
+  }, [selectedConvId, subscribeToChat]);
+
+  // Auto-scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [currentMessages.length, selectedConvId]);
 
-  const handleSend = (e) => {
-    e.preventDefault();
-    if (!newMessage.trim() || !selectedConvId) return;
+  const handleSend = useCallback(async (e) => {
+    e?.preventDefault();
+    if (!newMessage.trim() || !selectedConvId || !user) return;
 
-    const msg = {
-      id: `msg-${Date.now()}`,
-      senderId: BARBER_ID,
-      senderName: 'Barbearia do João',
-      text: newMessage.trim(),
-      timestamp: new Date().toISOString(),
-      read: true,
-    };
+    const recipientId = selectedConv?.clientId;
+    if (!recipientId) return;
 
-    setMessages((prev) => ({
-      ...prev,
-      [selectedConvId]: [...(prev[selectedConvId] || []), msg],
-    }));
+    await addMessage(
+      selectedConvId,
+      newMessage.trim(),
+      user.uid,
+      user.barbershopName || user.name || 'Barbeiro',
+      recipientId,
+      'client'
+    );
     setNewMessage('');
-  };
+  }, [newMessage, selectedConvId, selectedConv, user, addMessage]);
 
   const formatMsgTime = (ts) => {
     try {
@@ -98,7 +105,11 @@ export default function BarberChat() {
             {filteredConversations.length === 0 ? (
               <div className="chat-empty-conversations">
                 <MessageSquare size={32} />
-                <p className="text-small">Nenhuma conversa encontrada</p>
+                <p className="text-small">
+                  {conversations.length === 0
+                    ? 'Nenhuma conversa ainda. Aguarde seus clientes agendarem!'
+                    : 'Nenhuma conversa encontrada'}
+                </p>
               </div>
             ) : (
               filteredConversations.map((conv) => (
@@ -136,7 +147,6 @@ export default function BarberChat() {
             </div>
           ) : (
             <>
-              {/* Chat Header */}
               <div className="chat-header">
                 <button
                   className="btn btn-icon btn-ghost chat-back-btn"
@@ -154,13 +164,17 @@ export default function BarberChat() {
                 </div>
               </div>
 
-              {/* Messages */}
               <div className="chat-messages">
+                {currentMessages.length === 0 && (
+                  <div className="chat-empty-messages">
+                    <p className="text-small text-muted">Inicie a conversa!</p>
+                  </div>
+                )}
                 {currentMessages.map((msg) => {
-                  const isBarber = msg.senderId === BARBER_ID;
+                  const isBarber = msg.senderId === user?.uid;
                   return (
                     <div
-                      key={msg.id}
+                      key={msg.id || msg.firebaseKey}
                       className={`chat-message ${isBarber ? 'chat-message-sent' : 'chat-message-received'}`}
                     >
                       <div className="chat-bubble">
@@ -173,7 +187,6 @@ export default function BarberChat() {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Input */}
               <form className="chat-input-bar" onSubmit={handleSend}>
                 <input
                   className="input chat-input"

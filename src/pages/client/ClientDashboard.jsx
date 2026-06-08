@@ -1,6 +1,6 @@
 import { useAuth } from '../../contexts/AuthContext';
 import { Link } from 'react-router-dom';
-import { MOCK_BARBERSHOPS, getInitials } from '../../utils/mockData';
+import { getInitials } from '../../utils/mockData';
 import { formatDate } from '../../utils/helpers';
 import AppointmentCard from '../../components/AppointmentCard';
 import { useData } from '../../contexts/DataContext';
@@ -10,7 +10,7 @@ import './ClientDashboard.css';
 
 export default function ClientDashboard() {
   const { user } = useAuth();
-  const { appointments, favorites, googleCalendarSynced, syncGoogleCalendar, loyaltyCuts } = useData();
+  const { appointments, favorites, googleCalendarSynced, syncGoogleCalendar, loyaltyCuts, barbershops } = useData();
   const clientId = user?.uid || 'client-001';
  
   const upcomingAppointments = useMemo(() => {
@@ -23,8 +23,8 @@ export default function ClientDashboard() {
   }, [appointments, clientId]);
 
   const favoriteBarbershops = useMemo(() => {
-    return MOCK_BARBERSHOPS.filter((shop) => favorites.includes(shop.id));
-  }, [favorites]);
+    return barbershops.filter((shop) => favorites.includes(shop.id));
+  }, [favorites, barbershops]);
  
   const firstName = user?.name?.split(' ')[0] || 'Cliente';
 
@@ -258,35 +258,40 @@ export default function ClientDashboard() {
       {/* Barbershop Info */}
       <section className="dashboard-section">
         <div className="section-header">
-          <h2 className="heading-md">Barbearias Próximas</h2>
+          <h2 className="heading-md">Barbearias Cadastradas</h2>
           <Link to="/cliente/explorar" className="section-link">
             Ver todas
           </Link>
         </div>
-        <div className="barber-info-list stagger-children">
-          {MOCK_BARBERSHOPS.slice(0, 3).map((shop) => (
-            <Link to={`/cliente/barbearia/${shop.id}`} key={shop.id} className="barber-info-card card clickable-card">
-              <div className="barber-info-header">
-                <div className="barber-info-avatar avatar avatar-lg avatar-placeholder">
-                  {getInitials(shop.name)}
-                </div>
-                <div className="barber-info-details">
-                  <h3 className="barber-info-name">{shop.name}</h3>
-                  <div className="barber-info-rating">
-                    <Star size={14} className="star-filled" fill="#C8A96E" color="#C8A96E" />
-                    <span className="rating-value">{shop.rating}</span>
-                    <span className="rating-count">({shop.totalReviews})</span>
+        {barbershops.length === 0 ? (
+          <div className="empty-state-mini">
+            <p className="text-small text-muted">Nenhuma barbearia cadastrada ainda.</p>
+          </div>
+        ) : (
+          <div className="barber-info-list stagger-children">
+            {barbershops.slice(0, 3).map((shop) => (
+              <Link to={`/cliente/barbearia/${shop.id}`} key={shop.id} className="barber-info-card card clickable-card">
+                <div className="barber-info-header">
+                  <div className="barber-info-avatar avatar avatar-lg avatar-placeholder">
+                    {getInitials(shop.name)}
+                  </div>
+                  <div className="barber-info-details">
+                    <h3 className="barber-info-name">{shop.name}</h3>
+                    <div className="barber-info-rating">
+                      <Star size={14} className="star-filled" fill="#C8A96E" color="#C8A96E" />
+                      <span className="rating-value">{shop.rating || '5.0'}</span>
+                      <span className="rating-count">({shop.total_reviews || 0})</span>
+                    </div>
                   </div>
                 </div>
-                <span className="distance-badge">{shop.distance} km</span>
-              </div>
-              <div className="barber-info-address">
-                <MapPin size={14} />
-                <span>{shop.address}</span>
-              </div>
-            </Link>
-          ))}
-        </div>
+                <div className="barber-info-address">
+                  <MapPin size={14} />
+                  <span>{shop.address}</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );

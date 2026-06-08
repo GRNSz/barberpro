@@ -1,8 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MOCK_BARBERSHOPS, MOCK_SERVICES, getInitials, formatPrice } from '../../utils/mockData';
+import { getInitials, formatPrice } from '../../utils/mockData';
 import MapView from '../../components/MapView';
-import { Search, MapPin, Star, List, Map, Heart } from 'lucide-react';
+import { Search, MapPin, Star, List, Map, Heart, Store } from 'lucide-react';
 import { useData } from '../../contexts/DataContext';
 import './ExploreBarbershops.css';
 
@@ -11,27 +11,38 @@ export default function ExploreBarbershops() {
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState('list');
   const [onlyFavorites, setOnlyFavorites] = useState(false);
-  const { favorites, toggleFavorite } = useData();
+  const [loading, setLoading] = useState(false);
+  const { favorites, toggleFavorite, barbershops, fetchBarbershops } = useData();
+
+  // Refresh barbershops when page is mounted
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      await fetchBarbershops();
+      setLoading(false);
+    };
+    load();
+  }, [fetchBarbershops]);
 
   const filteredShops = useMemo(() => {
-    let result = MOCK_BARBERSHOPS;
+    let result = barbershops;
     if (onlyFavorites) {
       result = result.filter((shop) => favorites.includes(shop.id));
     }
     if (search.trim()) {
       const term = search.toLowerCase();
       result = result.filter((shop) =>
-        shop.name.toLowerCase().includes(term)
+        shop.name.toLowerCase().includes(term) ||
+        shop.address?.toLowerCase().includes(term)
       );
     }
     return result;
-  }, [search, onlyFavorites, favorites]);
+  }, [search, onlyFavorites, favorites, barbershops]);
 
   const getCheapestPrice = (shop) => {
-    const shopServices = MOCK_SERVICES.filter((s) => shop.services.includes(s.id));
-    if (shopServices.length === 0) return null;
-    const min = Math.min(...shopServices.map((s) => s.price));
-    return min;
+    if (!shop.services || shop.services.length === 0) return null;
+    const min = Math.min(...shop.services.map(s => parseFloat(s.price)));
+    return isFinite(min) ? min : null;
   };
 
   return (
@@ -42,7 +53,7 @@ export default function ExploreBarbershops() {
           <Search size={20} className="explore-search-icon" />
           <input
             type="text"
-            placeholder="Buscar barbearia..."
+            placeholder="Buscar barbearia ou endereço..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="explore-search-input"
@@ -84,7 +95,12 @@ export default function ExploreBarbershops() {
       {/* List View */}
       {viewMode === 'list' && (
         <div className="explore-list stagger-children">
-          {filteredShops.length > 0 ? (
+          {loading ? (
+            <div className="empty-state-mini">
+              <div className="loading-spinner" style={{ width: 32, height: 32, borderRadius: '50%', border: '3px solid var(--border)', borderTopColor: 'var(--accent-primary)', animation: 'spin 0.8s linear infinite', margin: '0 auto' }} />
+              <p style={{ marginTop: '1rem' }}>Buscando barbearias...</p>
+            </div>
+          ) : filteredShops.length > 0 ? (
             filteredShops.map((shop) => {
               const cheapest = getCheapestPrice(shop);
               const isFav = favorites.includes(shop.id);
@@ -102,18 +118,22 @@ export default function ExploreBarbershops() {
                     <h3 className="explore-card-name">{shop.name}</h3>
                     <div className="explore-card-rating">
                       <Star size={14} className="star-filled" />
-                      <span className="rating-value">{shop.rating}</span>
-                      <span className="rating-count">({shop.totalReviews} avaliações)</span>
+                      <span className="rating-value">{shop.rating || '5.0'}</span>
+                      <span className="rating-count">({shop.total_reviews || 0} avaliações)</span>
                     </div>
                     <div className="explore-card-address">
                       <MapPin size={14} />
                       <span>{shop.address}</span>
                     </div>
                     <div className="explore-card-footer">
-                      <span className="explore-distance-badge">{shop.distance} km</span>
                       {cheapest && (
                         <span className="explore-price-hint">
                           A partir de {formatPrice(cheapest)}
+                        </span>
+                      )}
+                      {shop.services?.length > 0 && (
+                        <span className="explore-distance-badge">
+                          {shop.services.length} serviço{shop.services.length > 1 ? 's' : ''}
                         </span>
                       )}
                     </div>
@@ -143,8 +163,13 @@ export default function ExploreBarbershops() {
             })
           ) : (
             <div className="empty-state-mini">
-              <Search size={32} />
-              <p>Nenhuma barbearia encontrada</p>
+              <Store size={48} style={{ opacity: 0.3 }} />
+              <h3 style={{ marginTop: '1rem' }}>Nenhuma barbearia encontrada</h3>
+              <p className="text-small text-muted" style={{ marginTop: '0.5rem' }}>
+                {barbershops.length === 0
+                  ? 'Nenhuma barbearia cadastrada ainda. Aguarde os barbeiros se registrarem!'
+                  : 'Tente outro termo de busca.'}
+              </p>
             </div>
           )}
         </div>
@@ -153,7 +178,11 @@ export default function ExploreBarbershops() {
       {/* Map View */}
       {viewMode === 'map' && (
         <div className="explore-map-wrapper animate-fade-in">
-          <MapView barbershops={filteredShops} height="calc(100dvh - 200px)" />
+          <MapView barbershops={filteredShops.filter(s => s.lat && s.lng).map(s => ({
+            ...s,
+            lat: parseFloat(s.lat),
+            lng: parseFloat(s.lng),
+          }))} height="calc(100dvh - 200px)" />
         </div>
       )}
     </div>

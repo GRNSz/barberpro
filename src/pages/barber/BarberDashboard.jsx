@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useData } from '../../contexts/DataContext';
-import { MOCK_CLIENTS, formatPrice } from '../../utils/mockData';
+import { formatPrice } from '../../utils/mockData';
 import { formatTimeAgo } from '../../utils/helpers';
 import AppointmentCard from '../../components/AppointmentCard';
 import DailySummary from '../../components/DailySummary';
@@ -10,7 +10,7 @@ import Navbar from '../../components/Navbar';
 import { CalendarDays, DollarSign, Users, Clock, CalendarPlus, XCircle, MessageSquare, Bell, Bot, Scissors, User } from 'lucide-react';
 import './BarberDashboard.css';
 
-const TODAY = '2026-06-02';
+const TODAY = new Date().toISOString().split('T')[0];
 
 const NOTIFICATION_ICONS = {
   new_appointment: CalendarPlus,
@@ -71,8 +71,8 @@ export default function BarberDashboard() {
       bg: 'var(--success-bg)',
     },
     {
-      label: 'Clientes Ativos',
-      value: MOCK_CLIENTS.length,
+      label: 'Clientes Hoje',
+      value: new Set(todayAppointments.map(a => a.clientId)).size,
       icon: Users,
       color: 'var(--info)',
       bg: 'var(--info-bg)',

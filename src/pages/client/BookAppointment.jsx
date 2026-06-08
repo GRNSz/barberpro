@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { MOCK_BARBERSHOPS, MOCK_SERVICES, MOCK_AVAILABLE_SLOTS, formatPrice, getInitials } from '../../utils/mockData';
+import { MOCK_AVAILABLE_SLOTS, formatPrice, getInitials } from '../../utils/mockData';
 import { getDayOfWeekLabel, formatDayMonth } from '../../utils/helpers';
 import { ChevronLeft, ChevronRight, Check, Clock, Calendar, ArrowLeft, MapPin, Star } from 'lucide-react';
 import { useData } from '../../contexts/DataContext';
@@ -10,12 +10,24 @@ export default function BookAppointment() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const initialBarbershopId = searchParams.get('barbershopId');
-  const { addAppointment } = useData();
+  const { addAppointment, barbershops } = useData();
 
   // Multi-barbershop states
   const [selectedBarbershop, setSelectedBarbershop] = useState(() => {
-    return initialBarbershopId ? MOCK_BARBERSHOPS.find((b) => b.id === initialBarbershopId) || null : null;
+    if (!initialBarbershopId) return null;
+    return null; // Will be set via useEffect once barbershops load
   });
+
+  // Set pre-selected barbershop once list loads
+  useEffect(() => {
+    if (initialBarbershopId && barbershops.length > 0 && !selectedBarbershop) {
+      const found = barbershops.find(b => b.id === initialBarbershopId);
+      if (found) {
+        setSelectedBarbershop(found);
+        setStep(1);
+      }
+    }
+  }, [initialBarbershopId, barbershops, selectedBarbershop]);
 
   const [step, setStep] = useState(initialBarbershopId && selectedBarbershop ? 1 : 0);
   const [selectedService, setSelectedService] = useState(null);
@@ -23,10 +35,10 @@ export default function BookAppointment() {
   const [selectedTime, setSelectedTime] = useState(null);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // Filter services offered by selected barbershop
+  // Filter services offered by selected barbershop (real data)
   const activeServices = useMemo(() => {
     if (!selectedBarbershop) return [];
-    return MOCK_SERVICES.filter((s) => s.active && selectedBarbershop.services.includes(s.id));
+    return (selectedBarbershop.services || []).filter(s => s.active !== false);
   }, [selectedBarbershop]);
 
   const availableDates = useMemo(() => {
@@ -114,7 +126,13 @@ export default function BookAppointment() {
           <h2 className="booking-step-title">Escolha a barbearia</h2>
           <p className="booking-step-desc">Selecione em qual barbearia quer ser atendido</p>
           <div className="services-grid stagger-children">
-            {MOCK_BARBERSHOPS.map((shop) => (
+            {barbershops.length === 0 ? (
+              <div className="empty-state-mini">
+                <MapPin size={32} />
+                <p>Nenhuma barbearia disponível ainda</p>
+              </div>
+            ) : (
+              barbershops.map((shop) => (
               <button
                 key={shop.id}
                 className={`service-card card ${selectedBarbershop?.id === shop.id ? 'selected' : ''}`}
@@ -141,7 +159,8 @@ export default function BookAppointment() {
                   </div>
                 )}
               </button>
-            ))}
+              ))
+            )}
           </div>
         </div>
       )}

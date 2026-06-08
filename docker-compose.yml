@@ -39,6 +39,7 @@ services:
       JWT_SECRET: barberpro_jwt_secret_key_999
       BI_TOKEN: barberpro_default_bi_secret_token_123
       CLIENT_ORIGIN: ${CLIENT_ORIGIN:-http://localhost}
+      NODE_ENV: production
     depends_on:
       db:
         condition: service_healthy

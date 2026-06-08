@@ -8,6 +8,7 @@ import authRouter from './routes/auth.js';
 import appointmentsRouter from './routes/appointments.js';
 import healthRouter from './routes/health.js';
 import biRouter from './routes/bi.js';
+import barbershopsRouter from './routes/barbershops.js';
 
 dotenv.config();
 
@@ -66,6 +67,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/appointments', appointmentsRouter);
 app.use('/api/health', healthRouter);
 app.use('/api/bi', biRouter);
+app.use('/api/barbershops', barbershopsRouter);
 
 // Global Error Handler
 app.use((err, req, res, next) => {

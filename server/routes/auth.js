@@ -5,6 +5,21 @@ import pool from '../db.js';
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'barberpro_jwt_secret_key_999';
 
+// Helper to map snake_case postgres columns to camelCase expected by the React frontend
+const mapUserToCamelCase = (dbUser) => {
+  if (!dbUser) return null;
+  const mapped = { ...dbUser };
+  if (dbUser.barbershop_name !== undefined) {
+    mapped.barbershopName = dbUser.barbershop_name;
+    delete mapped.barbershop_name;
+  }
+  if (dbUser.barbershop_description !== undefined) {
+    mapped.barbershopDescription = dbUser.barbershop_description;
+    delete mapped.barbershop_description;
+  }
+  return mapped;
+};
+
 // Endpoint to login
 router.post('/login', async (req, res) => {
   const { email, password, role } = req.body;
@@ -47,20 +62,7 @@ router.post('/login', async (req, res) => {
       userObj = userRes.rows[0];
     }
 
-// Helper to map snake_case postgres columns to camelCase expected by the React frontend
-const mapUserToCamelCase = (dbUser) => {
-  if (!dbUser) return null;
-  const mapped = { ...dbUser };
-  if (dbUser.barbershop_name !== undefined) {
-    mapped.barbershopName = dbUser.barbershop_name;
-    delete dbUser.barbershop_name;
-  }
-  if (dbUser.barbershop_description !== undefined) {
-    mapped.barbershopDescription = dbUser.barbershop_description;
-    delete dbUser.barbershop_description;
-  }
-  return mapped;
-};
+
 
 // Generate JWT token
     const token = jwt.sign(
@@ -69,11 +71,12 @@ const mapUserToCamelCase = (dbUser) => {
       { expiresIn: '24h' }
     );
 
-    // Set cookie
+    // Set cookie — use sameSite none + secure for cross-origin HTTPS (GCP VM)
+    const isProduction = process.env.NODE_ENV === 'production';
     res.cookie('token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
       maxAge: 24 * 60 * 60 * 1000 // 1 day
     });
 
@@ -150,11 +153,12 @@ router.post('/register', async (req, res) => {
       { expiresIn: '24h' }
     );
 
-    // Set cookie
+    // Set cookie — use sameSite none + secure for cross-origin HTTPS (GCP VM)
+    const isProd = process.env.NODE_ENV === 'production';
     res.cookie('token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax',
       maxAge: 24 * 60 * 60 * 1000
     });
 

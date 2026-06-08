@@ -166,62 +166,25 @@ export const MOCK_SERVICES = [
 
 export const getServiceById = (id) => MOCK_SERVICES.find((s) => s.id === id) || null;
 
-// ==================== APPOINTMENTS ====================
-export const MOCK_APPOINTMENTS = [
-  { id: 'apt-001', clientId: 'client-001', clientName: 'Carlos Silva', clientAvatar: null, service: 'Corte + Barba', serviceId: 'svc-003', barbershopId: 'barber-001', barbershopName: 'Barbearia do João', date: '2026-06-02', time: '09:00', status: 'confirmado', price: 70.00, notes: '' },
-  { id: 'apt-002', clientId: 'client-002', clientName: 'Pedro Santos', clientAvatar: null, service: 'Corte Masculino', serviceId: 'svc-001', barbershopId: 'barber-001', barbershopName: 'Barbearia do João', date: '2026-06-02', time: '10:00', status: 'confirmado', price: 45.00, notes: 'Preferência: degradê baixo' },
-  { id: 'apt-003', clientId: 'client-003', clientName: 'Lucas Oliveira', clientAvatar: null, service: 'Barba', serviceId: 'svc-002', barbershopId: 'barber-001', barbershopName: 'Barbearia do João', date: '2026-06-02', time: '11:00', status: 'pendente', price: 35.00, notes: '' },
-  { id: 'apt-004', clientId: 'client-004', clientName: 'Rafael Costa', clientAvatar: null, service: 'Corte Masculino', serviceId: 'svc-001', barbershopId: 'barber-001', barbershopName: 'Barbearia do João', date: '2026-06-02', time: '14:00', status: 'confirmado', price: 45.00, notes: '' },
-  { id: 'apt-005', clientId: 'client-001', clientName: 'Carlos Silva', clientAvatar: null, service: 'Corte Masculino', serviceId: 'svc-001', barbershopId: 'barber-001', barbershopName: 'Barbearia do João', date: '2026-06-03', time: '09:30', status: 'pendente', price: 45.00, notes: '' },
-  { id: 'apt-006', clientId: 'client-005', clientName: 'Bruno Almeida', clientAvatar: null, service: 'Pigmentação', serviceId: 'svc-004', barbershopId: 'barber-001', barbershopName: 'Barbearia do João', date: '2026-06-03', time: '15:00', status: 'confirmado', price: 60.00, notes: 'Primeira vez — verificar alergia' },
-  { id: 'apt-007', clientId: 'client-002', clientName: 'Pedro Santos', clientAvatar: null, service: 'Corte + Barba', serviceId: 'svc-003', barbershopId: 'barber-001', barbershopName: 'Barbearia do João', date: '2026-05-28', time: '10:00', status: 'concluído', price: 70.00, notes: '' },
-  { id: 'apt-008', clientId: 'client-003', clientName: 'Lucas Oliveira', clientAvatar: null, service: 'Corte Masculino', serviceId: 'svc-001', barbershopId: 'barber-001', barbershopName: 'Barbearia do João', date: '2026-05-27', time: '16:00', status: 'concluído', price: 45.00, notes: '' },
-  { id: 'apt-009', clientId: 'client-004', clientName: 'Rafael Costa', clientAvatar: null, service: 'Corte Masculino', serviceId: 'svc-001', barbershopId: 'barber-001', barbershopName: 'Barbearia do João', date: '2026-05-26', time: '09:00', status: 'cancelado', price: 45.00, notes: 'Cancelou por motivo pessoal' },
-];
+// No mock appointments — data comes from PostgreSQL via API
+export const MOCK_APPOINTMENTS = [];
+
 
 // ==================== CLIENTS ====================
-export const MOCK_CLIENTS = [
-  { id: 'client-001', name: 'Carlos Silva', phone: '(11) 98765-4321', whatsapp: '5511987654321', email: 'carlos@email.com', avatar: null, notes: 'Prefere corte degradê. Cliente desde 2024.', totalVisits: 12, lastVisit: '2026-05-30', favoriteService: 'Corte + Barba' },
-  { id: 'client-002', name: 'Pedro Santos', phone: '(11) 97654-3210', whatsapp: '5511976543210', email: 'pedro@email.com', avatar: null, notes: 'Pede sempre corte social.', totalVisits: 8, lastVisit: '2026-05-28', favoriteService: 'Corte Masculino' },
-  { id: 'client-003', name: 'Lucas Oliveira', phone: '(11) 96543-2109', whatsapp: '5511965432109', email: 'lucas@email.com', avatar: null, notes: '', totalVisits: 5, lastVisit: '2026-05-27', favoriteService: 'Barba' },
-  { id: 'client-004', name: 'Rafael Costa', phone: '(11) 95432-1098', whatsapp: '5511954321098', email: 'rafael@email.com', avatar: null, notes: 'Chega sempre 10 min atrasado.', totalVisits: 3, lastVisit: '2026-05-20', favoriteService: 'Corte Masculino' },
-  { id: 'client-005', name: 'Bruno Almeida', phone: '(11) 94321-0987', whatsapp: '5511943210987', email: 'bruno@email.com', avatar: null, notes: 'Cliente novo. Verificar alergia para pigmentação.', totalVisits: 1, lastVisit: '2026-05-15', favoriteService: 'Pigmentação' },
-];
+// Mock clients removed — real clients come from agendamentos via PostgreSQL
+export const MOCK_CLIENTS = [];
+
 
 // ==================== CONVERSATIONS ====================
-export const MOCK_CONVERSATIONS = [
-  { id: 'conv-001', clientId: 'client-001', clientName: 'Carlos Silva', clientAvatar: null, lastMessage: 'Blz, tô confirmado pra segunda!', lastMessageTime: '2026-05-30T18:30:00', unreadCount: 1 },
-  { id: 'conv-002', clientId: 'client-002', clientName: 'Pedro Santos', clientAvatar: null, lastMessage: 'Valeu João, ficou top o corte!', lastMessageTime: '2026-05-28T15:20:00', unreadCount: 0 },
-  { id: 'conv-003', clientId: 'client-003', clientName: 'Lucas Oliveira', clientAvatar: null, lastMessage: 'Consegue encaixar uma barba amanhã?', lastMessageTime: '2026-05-30T14:10:00', unreadCount: 2 },
-];
+// No mock conversations — data comes from Firebase Realtime Database
+export const MOCK_CONVERSATIONS = [];
 
-export const MOCK_MESSAGES = {
-  'conv-001': [
-    { id: 'msg-001', senderId: 'client-001', senderName: 'Carlos Silva', text: 'Opa João, tudo bem?', timestamp: '2026-05-30T18:00:00', read: true },
-    { id: 'msg-002', senderId: 'barber-001', senderName: 'Barbearia do João', text: 'E aí Carlos! Tudo certo, e você?', timestamp: '2026-05-30T18:05:00', read: true },
-    { id: 'msg-003', senderId: 'client-001', senderName: 'Carlos Silva', text: 'De boa! Queria confirmar meu horário de segunda, 9h, corte + barba', timestamp: '2026-05-30T18:10:00', read: true },
-    { id: 'msg-004', senderId: 'barber-001', senderName: 'Barbearia do João', text: 'Confirmado! Te espero segunda às 9h 👊', timestamp: '2026-05-30T18:15:00', read: true },
-    { id: 'msg-005', senderId: 'client-001', senderName: 'Carlos Silva', text: 'Blz, tô confirmado pra segunda!', timestamp: '2026-05-30T18:30:00', read: false },
-  ],
-  'conv-002': [
-    { id: 'msg-010', senderId: 'client-002', senderName: 'Pedro Santos', text: 'João, o corte ficou muito bom!', timestamp: '2026-05-28T15:15:00', read: true },
-    { id: 'msg-011', senderId: 'barber-001', senderName: 'Barbearia do João', text: 'Valeu Pedro! Sempre bom te atender 😄', timestamp: '2026-05-28T15:18:00', read: true },
-    { id: 'msg-012', senderId: 'client-002', senderName: 'Pedro Santos', text: 'Valeu João, ficou top o corte!', timestamp: '2026-05-28T15:20:00', read: true },
-  ],
-  'conv-003': [
-    { id: 'msg-020', senderId: 'client-003', senderName: 'Lucas Oliveira', text: 'Fala João!', timestamp: '2026-05-30T14:00:00', read: true },
-    { id: 'msg-021', senderId: 'client-003', senderName: 'Lucas Oliveira', text: 'Consegue encaixar uma barba amanhã?', timestamp: '2026-05-30T14:10:00', read: false },
-  ],
-};
+export const MOCK_MESSAGES = {};
 
 // ==================== NOTIFICATIONS ====================
-export const MOCK_NOTIFICATIONS = [
-  { id: 'notif-001', type: 'new_appointment', title: 'Novo Agendamento', message: 'Carlos Silva agendou Corte + Barba para 02/06 às 09:00', timestamp: '2026-05-30T16:00:00', read: false },
-  { id: 'notif-002', type: 'new_appointment', title: 'Novo Agendamento', message: 'Lucas Oliveira agendou Barba para 02/06 às 11:00', timestamp: '2026-05-30T15:30:00', read: false },
-  { id: 'notif-003', type: 'cancelled', title: 'Agendamento Cancelado', message: 'Rafael Costa cancelou o horário de 26/05 às 09:00', timestamp: '2026-05-26T08:00:00', read: true },
-  { id: 'notif-004', type: 'message', title: 'Nova Mensagem', message: 'Carlos Silva enviou uma mensagem', timestamp: '2026-05-30T18:30:00', read: false },
-  { id: 'notif-005', type: 'new_appointment', title: 'Novo Agendamento', message: 'Bruno Almeida agendou Pigmentação para 03/06 às 15:00', timestamp: '2026-05-29T12:00:00', read: true },
-];
+// No mock notifications — data comes from Firebase Realtime Database
+export const MOCK_NOTIFICATIONS = [];
+
 
 // ==================== AVAILABLE SLOTS ====================
 const generateAvailableSlots = () => {

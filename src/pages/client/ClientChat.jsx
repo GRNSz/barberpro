@@ -1,45 +1,67 @@
-import { useState, useRef, useEffect } from 'react';
-import { MOCK_MESSAGES, MOCK_BARBER, getInitials } from '../../utils/mockData';
-import { Send, ArrowLeft } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
+import { useData } from '../../contexts/DataContext';
+import { getInitials } from '../../utils/mockData';
+import { Send } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import './ClientChat.css';
 
-const CLIENT_ID = 'client-001';
-const CONVERSATION_ID = 'conv-001';
-
 export default function ClientChat() {
-  const initialMessages = MOCK_MESSAGES[CONVERSATION_ID] || [];
-  const [messages, setMessages] = useState(initialMessages);
+  const { user } = useAuth();
+  const { conversations, messages, subscribeToChat, addMessage } = useData();
   const [newMessage, setNewMessage] = useState('');
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const unsubscribeRef = useRef(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  // Client chats with the barbershop they last interacted with
+  // Use the first (most recent) conversation
+  const activeConv = conversations[0] || null;
+  const convId = activeConv?.id;
+
+  // The barber's uid is the conversation id when set up by addAppointment
+  // convId = client's uid (set when barber opens) or barbershop owner uid
+  const currentMessages = convId ? (messages[convId] || []) : [];
+
+  // Subscribe to Firebase real-time chat
+  useEffect(() => {
+    if (unsubscribeRef.current) {
+      unsubscribeRef.current();
+      unsubscribeRef.current = null;
+    }
+    if (convId) {
+      unsubscribeRef.current = subscribeToChat(convId);
+    }
+    return () => {
+      if (unsubscribeRef.current) unsubscribeRef.current();
+    };
+  }, [convId, subscribeToChat]);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [currentMessages.length]);
 
-  const handleSend = () => {
+  const handleSend = useCallback(async () => {
     const text = newMessage.trim();
-    if (!text) return;
+    if (!text || !user || !convId) return;
 
-    const msg = {
-      id: `msg-local-${Date.now()}`,
-      senderId: CLIENT_ID,
-      senderName: 'Carlos Silva',
+    // The recipient is the barber — get their uid from conversation clientId field
+    // When barber creates conv for client, clientId = client uid, so barber uid = conv.id
+    const recipientId = activeConv?.barberId || convId;
+    const recipientType = 'barber';
+
+    await addMessage(
+      convId,
       text,
-      timestamp: new Date().toISOString(),
-      read: false,
-    };
-
-    setMessages((prev) => [...prev, msg]);
+      user.uid,
+      user.name,
+      recipientId,
+      recipientType
+    );
     setNewMessage('');
     inputRef.current?.focus();
-  };
+  }, [newMessage, user, convId, activeConv, addMessage]);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -50,8 +72,7 @@ export default function ClientChat() {
 
   const formatMessageTime = (timestamp) => {
     try {
-      const date = parseISO(timestamp);
-      return format(date, 'HH:mm', { locale: ptBR });
+      return format(parseISO(timestamp), 'HH:mm', { locale: ptBR });
     } catch {
       return '';
     }
@@ -59,20 +80,37 @@ export default function ClientChat() {
 
   const formatMessageDate = (timestamp) => {
     try {
-      const date = parseISO(timestamp);
-      return format(date, "dd 'de' MMMM", { locale: ptBR });
+      return format(parseISO(timestamp), "dd 'de' MMMM", { locale: ptBR });
     } catch {
       return '';
     }
   };
 
   // Group messages by date
-  const groupedMessages = messages.reduce((groups, msg) => {
-    const dateKey = msg.timestamp.split('T')[0];
+  const groupedMessages = currentMessages.reduce((groups, msg) => {
+    const dateKey = msg.timestamp?.split('T')[0] || 'hoje';
     if (!groups[dateKey]) groups[dateKey] = [];
     groups[dateKey].push(msg);
     return groups;
   }, {});
+
+  const barberName = activeConv?.clientName || 'Barbearia';
+
+  if (!activeConv) {
+    return (
+      <div className="page-enter client-chat">
+        <div className="chat-no-conv">
+          <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+            <Send size={48} style={{ opacity: 0.3, marginBottom: '1rem' }} />
+            <h3 className="heading-md">Nenhuma conversa ainda</h3>
+            <p className="text-body text-muted" style={{ marginTop: '0.5rem' }}>
+              Faça um agendamento para iniciar uma conversa com a barbearia.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="page-enter client-chat">
@@ -80,10 +118,10 @@ export default function ClientChat() {
       <div className="chat-header">
         <div className="chat-header-info">
           <div className="avatar avatar-placeholder chat-header-avatar">
-            {getInitials(MOCK_BARBER.name)}
+            {getInitials(barberName)}
           </div>
           <div className="chat-header-details">
-            <span className="chat-header-name">{MOCK_BARBER.name}</span>
+            <span className="chat-header-name">{barberName}</span>
             <span className="chat-header-status">
               <span className="online-dot" />
               Online
@@ -100,15 +138,15 @@ export default function ClientChat() {
               <span>{formatMessageDate(msgs[0].timestamp)}</span>
             </div>
             {msgs.map((msg) => {
-              const isMe = msg.senderId === CLIENT_ID;
+              const isMe = msg.senderId === user?.uid;
               return (
                 <div
-                  key={msg.id}
+                  key={msg.id || msg.firebaseKey}
                   className={`chat-bubble-row ${isMe ? 'sent' : 'received'}`}
                 >
                   {!isMe && (
                     <div className="avatar avatar-sm avatar-placeholder chat-bubble-avatar">
-                      {getInitials(MOCK_BARBER.name)}
+                      {getInitials(barberName)}
                     </div>
                   )}
                   <div className={`chat-bubble ${isMe ? 'bubble-sent' : 'bubble-received'}`}>
@@ -120,6 +158,11 @@ export default function ClientChat() {
             })}
           </div>
         ))}
+        {currentMessages.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '2rem', opacity: 0.5 }}>
+            <p className="text-small">Inicie a conversa!</p>
+          </div>
+        )}
         <div ref={messagesEndRef} />
       </div>
 
