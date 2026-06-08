@@ -9,7 +9,7 @@ import { ptBR } from 'date-fns/locale';
 import { useData } from '../../contexts/DataContext';
 import './ManageSchedule.css';
 
-const BASE_DATE = '2026-06-02';
+const BASE_DATE = new Date().toISOString().split('T')[0];
 
 function generateWeekDays(startDateStr) {
   const start = parseISO(startDateStr);

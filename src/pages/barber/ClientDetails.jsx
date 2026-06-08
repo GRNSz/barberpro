@@ -1,44 +1,67 @@
-import { useState, useMemo } from 'react';
-import { MOCK_CLIENTS, MOCK_APPOINTMENTS, getInitials, formatPrice } from '../../utils/mockData';
+import { useState, useMemo, useEffect } from 'react';
+import { getInitials, formatPrice } from '../../utils/mockData';
 import { formatDateShort } from '../../utils/helpers';
 import Navbar from '../../components/Navbar';
 import WhatsAppButton from '../../components/WhatsAppButton';
+import { useData } from '../../contexts/DataContext';
 import { Search, User, Phone, Mail, Calendar, Star, StickyNote, X } from 'lucide-react';
 import './ClientDetails.css';
 
 export default function ClientDetails() {
+  const { appointments } = useData();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClientId, setSelectedClientId] = useState(null);
-  const [clientNotes, setClientNotes] = useState(() => {
-    const notes = {};
-    MOCK_CLIENTS.forEach((c) => {
-      notes[c.id] = c.notes;
-    });
-    return notes;
-  });
+  const [clients, setClients] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [clientNotes, setClientNotes] = useState({});
   const [savedFeedback, setSavedFeedback] = useState(null);
+
+  useEffect(() => {
+    const fetchClients = async () => {
+      try {
+        const res = await fetch('/api/barbershops/me/clients');
+        if (!res.ok) throw new Error('Falha ao carregar clientes');
+        const data = await res.json();
+        setClients(data);
+      } catch (err) {
+        setError(err.message || 'Erro ao carregar clientes');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchClients();
+  }, []);
+
+  // Load saved notes when a client is selected
+  useEffect(() => {
+    if (selectedClientId) {
+      const saved = localStorage.getItem(`barberpro_client_notes_${selectedClientId}`) || '';
+      setClientNotes((prev) => ({ ...prev, [selectedClientId]: saved }));
+    }
+  }, [selectedClientId]);
 
   const filteredClients = useMemo(
     () =>
-      MOCK_CLIENTS.filter((c) =>
+      clients.filter((c) =>
         c.name.toLowerCase().includes(searchTerm.toLowerCase())
       ),
-    [searchTerm]
+    [searchTerm, clients]
   );
 
   const selectedClient = useMemo(
-    () => MOCK_CLIENTS.find((c) => c.id === selectedClientId),
-    [selectedClientId]
+    () => clients.find((c) => c.id === selectedClientId),
+    [selectedClientId, clients]
   );
 
   const clientAppointments = useMemo(
     () =>
       selectedClientId
-        ? MOCK_APPOINTMENTS.filter((a) => a.clientId === selectedClientId).sort(
+        ? appointments.filter((a) => a.clientId === selectedClientId).sort(
             (a, b) => new Date(b.date) - new Date(a.date)
           )
         : [],
-    [selectedClientId]
+    [selectedClientId, appointments]
   );
 
   const handleSelectClient = (id) => {
@@ -47,8 +70,11 @@ export default function ClientDetails() {
   };
 
   const handleSaveNotes = () => {
-    setSavedFeedback(selectedClientId);
-    setTimeout(() => setSavedFeedback(null), 2000);
+    if (selectedClientId) {
+      localStorage.setItem(`barberpro_client_notes_${selectedClientId}`, clientNotes[selectedClientId] || '');
+      setSavedFeedback(selectedClientId);
+      setTimeout(() => setSavedFeedback(null), 2000);
+    }
   };
 
   return (

@@ -241,4 +241,160 @@ router.delete('/me/services/:id', async (req, res) => {
   }
 });
 
+// GET /api/barbershops/me/clients — list all clients of current barber
+router.get('/me/clients', async (req, res) => {
+  const decoded = getUser(req);
+  if (!decoded || decoded.role !== 'barber') {
+    return res.status(401).json({ error: 'Não autorizado' });
+  }
+
+  try {
+    const checkShop = await pool.query('SELECT id FROM barbearias WHERE owner_uid = $1', [decoded.uid]);
+    if (checkShop.rows.length === 0) return res.json([]);
+    const shopId = checkShop.rows[0].id;
+
+    const result = await pool.query(`
+      SELECT DISTINCT 
+        u.uid AS id,
+        u.name,
+        u.email,
+        u.phone,
+        u.whatsapp,
+        u.avatar,
+        COUNT(a.id)::int AS "totalVisits",
+        MAX(a.date) AS "lastVisit",
+        (
+          SELECT service 
+          FROM agendamentos 
+          WHERE client_id = u.uid AND barbershop_id = $2
+          GROUP BY service 
+          ORDER BY COUNT(*) DESC 
+          LIMIT 1
+        ) AS "favoriteService"
+      FROM usuarios u
+      JOIN agendamentos a ON a.client_id = u.uid
+      WHERE a.barbershop_id = $2
+      GROUP BY u.uid;
+    `, [decoded.uid, shopId]);
+
+    // Format lastVisit as YYYY-MM-DD
+    const formatted = result.rows.map(row => ({
+      ...row,
+      lastVisit: row.lastVisit ? row.lastVisit.toISOString().split('T')[0] : null
+    }));
+
+    res.json(formatted);
+  } catch (err) {
+    console.error('Error fetching clients for barber:', err.message);
+    res.status(500).json({ error: 'Erro ao buscar clientes' });
+  }
+});
+
+// GET /api/barbershops/me/costs — list costs
+router.get('/me/costs', async (req, res) => {
+  const decoded = getUser(req);
+  if (!decoded || decoded.role !== 'barber') {
+    return res.status(401).json({ error: 'Não autorizado' });
+  }
+
+  try {
+    const shop = await pool.query(
+      'SELECT id FROM barbearias WHERE owner_uid = $1',
+      [decoded.uid]
+    );
+    if (shop.rows.length === 0) return res.json([]);
+
+    const costs = await pool.query(
+      'SELECT * FROM custos WHERE barbershop_id = $1 ORDER BY date DESC, id DESC',
+      [shop.rows[0].id]
+    );
+    // Format date as YYYY-MM-DD
+    const formatted = costs.rows.map(row => ({
+      ...row,
+      date: row.date.toISOString().split('T')[0],
+      value: parseFloat(row.value)
+    }));
+    res.json(formatted);
+  } catch (err) {
+    console.error('Error fetching costs:', err.message);
+    res.status(500).json({ error: 'Erro ao buscar custos' });
+  }
+});
+
+// POST /api/barbershops/me/costs — add/update cost
+router.post('/me/costs', async (req, res) => {
+  const decoded = getUser(req);
+  if (!decoded || decoded.role !== 'barber') {
+    return res.status(401).json({ error: 'Não autorizado' });
+  }
+
+  const { id, description, value, date, category } = req.body;
+  if (!description || !value || !date || !category) {
+    return res.status(400).json({ error: 'Todos os campos são obrigatórios' });
+  }
+
+  try {
+    const shop = await pool.query(
+      'SELECT id FROM barbearias WHERE owner_uid = $1',
+      [decoded.uid]
+    );
+    if (shop.rows.length === 0) {
+      return res.status(400).json({ error: 'Crie sua barbearia primeiro acessando o perfil' });
+    }
+    const shopId = shop.rows[0].id;
+
+    let result;
+    if (id) {
+      // Update existing
+      result = await pool.query(
+        `UPDATE custos SET description=$1, value=$2, date=$3, category=$4
+         WHERE id=$5 AND barbershop_id=$6 RETURNING *`,
+        [description, value, date, category, id, shopId]
+      );
+    } else {
+      // Create new
+      const newId = `cost-${Date.now()}`;
+      result = await pool.query(
+        `INSERT INTO custos (id, barbershop_id, description, value, date, category)
+         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+        [newId, shopId, description, value, date, category]
+      );
+    }
+
+    const row = result.rows[0];
+    res.json({
+      ...row,
+      date: row.date.toISOString().split('T')[0],
+      value: parseFloat(row.value)
+    });
+  } catch (err) {
+    console.error('Error saving cost:', err.message);
+    res.status(500).json({ error: 'Erro ao salvar custo' });
+  }
+});
+
+// DELETE /api/barbershops/me/costs/:id
+router.delete('/me/costs/:id', async (req, res) => {
+  const decoded = getUser(req);
+  if (!decoded || decoded.role !== 'barber') {
+    return res.status(401).json({ error: 'Não autorizado' });
+  }
+
+  try {
+    const shop = await pool.query(
+      'SELECT id FROM barbearias WHERE owner_uid = $1',
+      [decoded.uid]
+    );
+    if (shop.rows.length === 0) {
+      return res.status(400).json({ error: 'Barbearia não encontrada' });
+    }
+
+    await pool.query('DELETE FROM custos WHERE id = $1 AND barbershop_id = $2', [req.params.id, shop.rows[0].id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error deleting cost:', err.message);
+    res.status(500).json({ error: 'Erro ao deletar custo' });
+  }
+});
+
 export default router;

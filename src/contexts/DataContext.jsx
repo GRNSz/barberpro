@@ -46,6 +46,37 @@ export function DataProvider({ children }) {
 
   // Track Firebase listeners to unsubscribe on logout
   const listenersRef = useRef([]);
+  const seenNotifIds = useRef(new Set());
+
+  const playNotificationSound = () => {
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const playBeep = (time, freq, dur) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, time);
+        gain.gain.setValueAtTime(0.08, time);
+        gain.gain.exponentialRampToValueAtTime(0.0001, time + dur);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(time);
+        osc.stop(time + dur);
+      };
+      const now = audioCtx.currentTime;
+      playBeep(now, 587.33, 0.08); // D5
+      playBeep(now + 0.1, 783.99, 0.12); // G5
+    } catch (e) {
+      console.warn('Could not play notification sound:', e);
+    }
+  };
+
+  const showDesktopNotification = (title, body) => {
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'granted') {
+      new Notification(title, { body, icon: '/favicon.ico' });
+    }
+  };
 
   // ─── FETCH BARBERSHOPS FROM API ───────────────────────────────────────────
   const fetchBarbershops = useCallback(async () => {
@@ -90,6 +121,13 @@ export function DataProvider({ children }) {
     }
   }, []);
 
+  // Request desktop notification permissions on login
+  useEffect(() => {
+    if (user && 'Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, [user]);
+
   // ─── FIREBASE REAL-TIME LISTENERS ────────────────────────────────────────
   useEffect(() => {
     if (!user) {
@@ -99,6 +137,7 @@ export function DataProvider({ children }) {
       setNotifications([]);
       setConversations([]);
       setMessages({});
+      seenNotifIds.current.clear();
       return;
     }
 
@@ -117,6 +156,23 @@ export function DataProvider({ children }) {
         const list = Object.entries(data)
           .map(([key, val]) => ({ firebaseKey: key, ...val }))
           .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        
+        let hasNewUnread = false;
+        list.forEach(n => {
+          const id = n.firebaseKey;
+          if (!seenNotifIds.current.has(id)) {
+            if (!n.read) {
+              hasNewUnread = true;
+              showDesktopNotification(n.title || 'BarberPro', n.message || '');
+            }
+            seenNotifIds.current.add(id);
+          }
+        });
+
+        if (hasNewUnread) {
+          playNotificationSound();
+        }
+
         setNotifications(list);
       } else {
         setNotifications([]);
@@ -244,11 +300,23 @@ export function DataProvider({ children }) {
         // Update barber conversation
         const barberConvRef = ref(database, `barbers/${shopOwnerId}/conversations/${user.uid}`);
         await set(barberConvRef, {
+          id: user.uid,
           clientId: user.uid,
           clientName: user.name,
           lastMessage: `Agendou ${formatted.service} para ${date.split('-').reverse().join('/')} às ${time}`,
           lastMessageTime: new Date().toISOString(),
           unreadCount: 1,
+        });
+
+        // Update client conversation
+        const clientConvRef = ref(database, `clients/${user.uid}/conversations/${shopOwnerId}`);
+        await set(clientConvRef, {
+          id: shopOwnerId,
+          barberId: shopOwnerId,
+          clientName: barbershop.name,
+          lastMessage: `Agendou ${formatted.service} para ${date.split('-').reverse().join('/')} às ${time}`,
+          lastMessageTime: new Date().toISOString(),
+          unreadCount: 0,
         });
       }
 
@@ -383,25 +451,46 @@ export function DataProvider({ children }) {
       read: false,
     };
 
-    // Write to Firebase — sender's chat
-    const senderType = userType === 'barber' ? 'barbers' : 'clients';
-    const senderMsgRef = ref(database, `${senderType}/${senderId}/chats/${convId}`);
-    await push(senderMsgRef, msgData);
+    const isSenderBarber = userType === 'barber';
+    const clientId = isSenderBarber ? recipientId : senderId;
+    const barberId = isSenderBarber ? senderId : recipientId;
 
-    // Write to Firebase — recipient's chat
-    const recipType = recipientType === 'barber' ? 'barbers' : 'clients';
-    const recipMsgRef = ref(database, `${recipType}/${recipientId}/chats/${convId}`);
-    await push(recipMsgRef, msgData);
+    // Write to Firebase — client's chat node
+    const clientMsgRef = ref(database, `clients/${clientId}/chats/${barberId}`);
+    await push(clientMsgRef, msgData);
 
-    // Update conversations for both sides
-    const senderConvRef = ref(database, `${senderType}/${senderId}/conversations/${convId}`);
-    await update(senderConvRef, { lastMessage: text, lastMessageTime: new Date().toISOString() });
+    // Write to Firebase — barber's chat node
+    const barberMsgRef = ref(database, `barbers/${barberId}/chats/${clientId}`);
+    await push(barberMsgRef, msgData);
 
-    const recipConvRef = ref(database, `${recipType}/${recipientId}/conversations/${convId}`);
-    await update(recipConvRef, {
+    // Update conversations metadata for client
+    const clientConvRef = ref(database, `clients/${clientId}/conversations/${barberId}`);
+    await update(clientConvRef, {
       lastMessage: text,
       lastMessageTime: new Date().toISOString(),
-      unreadCount: 1,
+      unreadCount: isSenderBarber ? 1 : 0
+    });
+
+    // Update conversations metadata for barber
+    const barberConvRef = ref(database, `barbers/${barberId}/conversations/${clientId}`);
+    await update(barberConvRef, {
+      lastMessage: text,
+      lastMessageTime: new Date().toISOString(),
+      unreadCount: isSenderBarber ? 0 : 1
+    });
+
+    // Send visual notification to recipient's Firebase notifications node
+    const notifPath = isSenderBarber
+      ? `clients/${clientId}/notifications`
+      : `barbers/${barberId}/notifications`;
+    const notifRef = ref(database, notifPath);
+    await push(notifRef, {
+      type: 'message',
+      title: isSenderBarber ? 'Nova mensagem do Barbeiro' : 'Nova mensagem do Cliente',
+      message: `${senderName}: ${text}`,
+      timestamp: new Date().toISOString(),
+      read: false,
+      convId: isSenderBarber ? barberId : clientId
     });
 
     // Update local state

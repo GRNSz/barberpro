@@ -22,7 +22,7 @@ const mapUserToCamelCase = (dbUser) => {
 
 // Endpoint to login
 router.post('/login', async (req, res) => {
-  const { email, password, role } = req.body;
+  const { email, password, role, name, avatar } = req.body;
   
   if (!email || !role) {
     return res.status(400).json({ error: 'Email e função são necessários' });
@@ -38,15 +38,13 @@ router.post('/login', async (req, res) => {
     let userObj;
 
     if (userRes.rows.length === 0) {
-      // If user doesn't exist yet, we register them on the fly for ease of test/mock
-      // (This guarantees the frontend has no blockers while using real DB)
-      const mockName = email.split('@')[0].replace('.', ' ');
-      const formattedName = mockName.charAt(0).toUpperCase() + mockName.slice(1);
+      // If user doesn't exist yet, we register them on the fly
+      const displayName = name || (email.split('@')[0].replace('.', ' ').charAt(0).toUpperCase() + email.split('@')[0].replace('.', ' ').slice(1));
       const newUid = `${role}-${Date.now()}`;
       
       const insertRes = await pool.query(
-        'INSERT INTO usuarios (uid, name, email, role, phone, whatsapp, address) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
-        [newUid, formattedName, email, role, '(11) 98888-7777', '5511988887777', 'Rua Cadastrada, 100']
+        'INSERT INTO usuarios (uid, name, email, role, phone, whatsapp, address, avatar) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+        [newUid, displayName, email, role, '(11) 98888-7777', '5511988887777', 'Rua Cadastrada, 100', avatar || null]
       );
       
       userObj = insertRes.rows[0];
@@ -203,6 +201,26 @@ router.put('/profile', async (req, res) => {
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Usuário não encontrado' });
+    }
+
+    // Sync or create barbershop if user is a barber
+    if (decoded.role === 'barber') {
+      const checkShop = await pool.query('SELECT id FROM barbearias WHERE owner_uid = $1', [decoded.uid]);
+      if (checkShop.rows.length === 0) {
+        const newShopId = `shop-${decoded.uid}-${Date.now()}`;
+        await pool.query(
+          `INSERT INTO barbearias (id, owner_uid, name, description, address, phone, whatsapp, rating, total_reviews)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, 5.0, 0)`,
+          [newShopId, decoded.uid, barbershopName || name, barbershopDescription || 'Minha barbearia.', address || 'Endereço da Barbearia', phone || null, whatsapp || null]
+        );
+      } else {
+        await pool.query(
+          `UPDATE barbearias 
+           SET name = $1, description = $2, address = $3, phone = $4, whatsapp = $5
+           WHERE owner_uid = $6`,
+          [barbershopName || name, barbershopDescription || 'Minha barbearia.', address || 'Endereço da Barbearia', phone || null, whatsapp || null, decoded.uid]
+        );
+      }
     }
 
     return res.json({ user: mapUserToCamelCase(result.rows[0]) });

@@ -4,7 +4,7 @@ import ThemeToggle from './ThemeToggle';
 import { getInitials } from '../utils/mockData';
 import {
   LayoutDashboard, CalendarDays, Scissors, Users, MessageSquare,
-  Bell, LogOut, Menu, X, Clock, MapPin, UserCircle, Bot, BookOpen, Shield
+  Bell, LogOut, Menu, X, Clock, MapPin, UserCircle, Bot, BookOpen, Shield, TrendingUp
 } from 'lucide-react';
 import { useState } from 'react';
 import './Sidebar.css';
@@ -13,6 +13,7 @@ const barberLinks = [
   { to: '/barbeiro', icon: LayoutDashboard, label: 'Dashboard', end: true },
   { to: '/barbeiro/agenda', icon: CalendarDays, label: 'Agenda' },
   { to: '/barbeiro/servicos', icon: Scissors, label: 'Serviços' },
+  { to: '/barbeiro/financeiro', icon: TrendingUp, label: 'Financeiro' },
   { to: '/barbeiro/clientes', icon: Users, label: 'Clientes' },
   { to: '/barbeiro/chat', icon: MessageSquare, label: 'Chat' },
   { to: '/barbeiro/assistente', icon: Bot, label: 'Assistente IA' },

@@ -74,6 +74,15 @@ CREATE TABLE IF NOT EXISTS historico_fidelidade (
   cuts_count INT DEFAULT 0
 );
 
+CREATE TABLE IF NOT EXISTS custos (
+  id VARCHAR(255) PRIMARY KEY,
+  barbershop_id VARCHAR(255) REFERENCES barbearias(id) ON DELETE CASCADE,
+  description VARCHAR(255) NOT NULL,
+  value DECIMAL(10,2) NOT NULL,
+  date DATE NOT NULL,
+  category VARCHAR(100) NOT NULL
+);
+
 -- Trigger de gamificação (fidelidade)
 CREATE OR REPLACE FUNCTION incrementa_cartao_fidelidade()
 RETURNS TRIGGER AS $$

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { MOCK_SERVICES, formatPrice } from '../../utils/mockData';
+import { useState, useEffect } from 'react';
+import { formatPrice } from '../../utils/mockData';
 import Navbar from '../../components/Navbar';
 import { Plus, Pencil, Trash2, Clock, X, Scissors } from 'lucide-react';
 import './ManageServices.css';
@@ -7,11 +7,29 @@ import './ManageServices.css';
 const emptyService = { name: '', price: '', duration: '', description: '' };
 
 export default function ManageServices() {
-  const [services, setServices] = useState(() => MOCK_SERVICES.map((s) => ({ ...s })));
+  const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState(emptyService);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const res = await fetch('/api/barbershops/me/services');
+        if (!res.ok) throw new Error('Falha ao carregar serviços');
+        const data = await res.json();
+        setServices(data);
+      } catch (err) {
+        setError(err.message || 'Erro ao buscar serviços do servidor');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchServices();
+  }, []);
 
   const openAddModal = () => {
     setEditingId(null);
@@ -40,48 +58,96 @@ export default function ManageServices() {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.name || !formData.price || !formData.duration) return;
 
-    if (editingId) {
-      setServices((prev) =>
-        prev.map((s) =>
-          s.id === editingId
-            ? {
-                ...s,
-                name: formData.name,
-                price: parseFloat(formData.price),
-                duration: parseInt(formData.duration, 10),
-                description: formData.description,
-              }
-            : s
-        )
-      );
-    } else {
-      const newService = {
-        id: `svc-${Date.now()}`,
-        name: formData.name,
-        price: parseFloat(formData.price),
-        duration: parseInt(formData.duration, 10),
-        description: formData.description,
-        active: true,
-        icon: '✂️',
-      };
-      setServices((prev) => [...prev, newService]);
+    try {
+      if (editingId) {
+        const existingSvc = services.find((s) => s.id === editingId);
+        const response = await fetch('/api/barbershops/me/services', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: editingId,
+            name: formData.name,
+            price: parseFloat(formData.price),
+            duration: parseInt(formData.duration, 10),
+            description: formData.description,
+            active: existingSvc ? existingSvc.active : true
+          })
+        });
+        if (!response.ok) throw new Error('Erro ao salvar alterações do serviço');
+        const savedService = await response.json();
+        setServices((prev) =>
+          prev.map((s) => (s.id === editingId ? savedService : s))
+        );
+      } else {
+        const response = await fetch('/api/barbershops/me/services', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: formData.name,
+            price: parseFloat(formData.price),
+            duration: parseInt(formData.duration, 10),
+            description: formData.description,
+            active: true
+          })
+        });
+        if (!response.ok) throw new Error('Erro ao adicionar novo serviço');
+        const savedService = await response.json();
+        setServices((prev) => [...prev, savedService]);
+      }
+      closeModal();
+    } catch (err) {
+      alert(err.message);
     }
-    closeModal();
   };
 
-  const handleToggleActive = (id) => {
+  const handleToggleActive = async (id) => {
+    const svc = services.find((s) => s.id === id);
+    if (!svc) return;
+    const newActive = !svc.active;
+
+    // Optimistic UI update
     setServices((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, active: !s.active } : s))
+      prev.map((s) => (s.id === id ? { ...s, active: newActive } : s))
     );
+
+    try {
+      const response = await fetch('/api/barbershops/me/services', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: svc.id,
+          name: svc.name,
+          price: svc.price,
+          duration: svc.duration,
+          description: svc.description,
+          active: newActive
+        })
+      });
+      if (!response.ok) throw new Error('Erro ao atualizar status');
+    } catch (err) {
+      console.error(err);
+      // Revert on error
+      setServices((prev) =>
+        prev.map((s) => (s.id === id ? { ...s, active: !newActive } : s))
+      );
+    }
   };
 
-  const handleDelete = (id) => {
-    setServices((prev) => prev.filter((s) => s.id !== id));
-    setDeleteConfirm(null);
+  const handleDelete = async (id) => {
+    try {
+      const response = await fetch(`/api/barbershops/me/services/${id}`, {
+        method: 'DELETE'
+      });
+      if (!response.ok) throw new Error('Erro ao excluir serviço');
+      setServices((prev) => prev.filter((s) => s.id !== id));
+      setDeleteConfirm(null);
+    } catch (err) {
+      alert(err.message);
+    }
   };
 
   return (

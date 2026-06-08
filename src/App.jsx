@@ -29,6 +29,7 @@ import ManageServices from './pages/barber/ManageServices';
 import ClientDetails from './pages/barber/ClientDetails';
 import BarberChat from './pages/barber/BarberChat';
 import AIAssistant from './pages/barber/AIAssistant';
+import FinancialAnalysis from './pages/barber/FinancialAnalysis';
 
 function AppLayout({ children, title }) {
   return (
@@ -173,6 +174,16 @@ function App() {
                   <ProtectedRoute requiredType="barber">
                     <AppLayout title="Serviços">
                       <ManageServices />
+                    </AppLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/barbeiro/financeiro"
+                element={
+                  <ProtectedRoute requiredType="barber">
+                    <AppLayout title="Financeiro">
+                      <FinancialAnalysis />
                     </AppLayout>
                   </ProtectedRoute>
                 }
