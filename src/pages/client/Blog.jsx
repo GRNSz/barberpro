@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Search, Heart, Sparkles, BookOpen, Clock, X, ArrowLeft } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import './Blog.css';
 
 const ARTICLES = [
@@ -205,7 +206,7 @@ export default function Blog() {
       </div>
 
       {/* Article Detail Modal */}
-      {selectedArticle && (
+      {selectedArticle && createPortal(
         <div className="modal-overlay" onClick={() => setSelectedArticle(null)}>
           <div className="modal blog-modal animate-scale-in" onClick={(e) => e.stopPropagation()}>
             <div className="blog-modal-header">
@@ -265,7 +266,8 @@ export default function Blog() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

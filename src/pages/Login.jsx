@@ -11,7 +11,8 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [userType, setUserType] = useState('client');
+  const isAdminRoute = window.location.pathname.endsWith('/admin');
+  const [userType, setUserType] = useState(isAdminRoute ? 'admin' : 'client');
   const [error, setError] = useState('');
   const [showGoogleModal, setShowGoogleModal] = useState(false);
 
@@ -61,26 +62,26 @@ export default function Login() {
         <p className="text-body">Entre na sua conta para continuar</p>
 
         {/* User type toggle */}
-        <div className="tabs mt-lg">
-          <button
-            className={`tab ${userType === 'client' ? 'active' : ''}`}
-            onClick={() => setUserType('client')}
-          >
-            Sou Cliente
-          </button>
-          <button
-            className={`tab ${userType === 'barber' ? 'active' : ''}`}
-            onClick={() => setUserType('barber')}
-          >
-            Sou Barbeiro
-          </button>
-          <button
-            className={`tab ${userType === 'admin' ? 'active' : ''}`}
-            onClick={() => setUserType('admin')}
-          >
-            Sou Admin
-          </button>
-        </div>
+        {isAdminRoute ? (
+          <div className="badge badge-accent mt-md" style={{ alignSelf: 'center', width: 'fit-content', padding: '6px 12px', borderRadius: 'var(--radius)', fontWeight: 'bold' }}>
+            Acesso Administrativo
+          </div>
+        ) : (
+          <div className="tabs mt-lg">
+            <button
+              className={`tab ${userType === 'client' ? 'active' : ''}`}
+              onClick={() => setUserType('client')}
+            >
+              Sou Cliente
+            </button>
+            <button
+              className={`tab ${userType === 'barber' ? 'active' : ''}`}
+              onClick={() => setUserType('barber')}
+            >
+              Sou Barbeiro
+            </button>
+          </div>
+        )}
 
         {error && <div className="auth-error">{error}</div>}
 
@@ -150,7 +151,7 @@ export default function Login() {
         </button>
 
         <p className="auth-footer-text">
-          Não tem uma conta? <Link to="/registro" className="auth-link">Criar conta</Link>
+          Não tem uma conta? <Link to={isAdminRoute ? "/registro/admin" : "/registro"} className="auth-link">Criar conta</Link>
         </p>
       </div>
     </div>

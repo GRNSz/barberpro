@@ -312,7 +312,8 @@ router.get('/me/costs', async (req, res) => {
     const formatted = costs.rows.map(row => ({
       ...row,
       date: row.date.toISOString().split('T')[0],
-      value: parseFloat(row.value)
+      value: parseFloat(row.value),
+      type: row.type || 'despesa'
     }));
     res.json(formatted);
   } catch (err) {
@@ -328,10 +329,12 @@ router.post('/me/costs', async (req, res) => {
     return res.status(401).json({ error: 'Não autorizado' });
   }
 
-  const { id, description, value, date, category } = req.body;
+  const { id, description, value, date, category, type } = req.body;
   if (!description || !value || !date || !category) {
     return res.status(400).json({ error: 'Todos os campos são obrigatórios' });
   }
+
+  const transactionType = type || 'despesa';
 
   try {
     const shop = await pool.query(
@@ -347,17 +350,17 @@ router.post('/me/costs', async (req, res) => {
     if (id) {
       // Update existing
       result = await pool.query(
-        `UPDATE custos SET description=$1, value=$2, date=$3, category=$4
-         WHERE id=$5 AND barbershop_id=$6 RETURNING *`,
-        [description, value, date, category, id, shopId]
+        `UPDATE custos SET description=$1, value=$2, date=$3, category=$4, type=$5
+         WHERE id=$6 AND barbershop_id=$7 RETURNING *`,
+        [description, value, date, category, transactionType, id, shopId]
       );
     } else {
       // Create new
       const newId = `cost-${Date.now()}`;
       result = await pool.query(
-        `INSERT INTO custos (id, barbershop_id, description, value, date, category)
-         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-        [newId, shopId, description, value, date, category]
+        `INSERT INTO custos (id, barbershop_id, description, value, date, category, type)
+         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+        [newId, shopId, description, value, date, category, transactionType]
       );
     }
 
@@ -365,7 +368,8 @@ router.post('/me/costs', async (req, res) => {
     res.json({
       ...row,
       date: row.date.toISOString().split('T')[0],
-      value: parseFloat(row.value)
+      value: parseFloat(row.value),
+      type: row.type || 'despesa'
     });
   } catch (err) {
     console.error('Error saving cost:', err.message);

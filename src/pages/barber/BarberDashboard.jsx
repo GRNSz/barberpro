@@ -7,7 +7,7 @@ import { formatTimeAgo } from '../../utils/helpers';
 import AppointmentCard from '../../components/AppointmentCard';
 import DailySummary from '../../components/DailySummary';
 import Navbar from '../../components/Navbar';
-import { CalendarDays, DollarSign, Users, Clock, CalendarPlus, XCircle, MessageSquare, Bell, Bot, Scissors, User } from 'lucide-react';
+import { CalendarDays, DollarSign, Users, Clock, CalendarPlus, XCircle, MessageSquare, Bell, Bot, Scissors, User, Check, X } from 'lucide-react';
 import './BarberDashboard.css';
 
 const TODAY = new Date().toISOString().split('T')[0];
@@ -26,7 +26,7 @@ const NOTIFICATION_COLORS = {
 
 export default function BarberDashboard() {
   const { user } = useAuth();
-  const { appointments, notifications } = useData();
+  const { appointments, notifications, confirmAppointment, cancelAppointment, completeAppointment, markPaymentReceived } = useData();
   const firstName = user?.name?.split(' ')[0] || 'João';
   const todayAppointments = useMemo(
     () => appointments.filter((a) => a.date === TODAY),
@@ -36,7 +36,7 @@ export default function BarberDashboard() {
   const revenueToday = useMemo(
     () =>
       todayAppointments
-        .filter((a) => a.status !== 'cancelado')
+        .filter((a) => a.paymentReceived)
         .reduce((sum, a) => sum + a.price, 0),
     [todayAppointments]
   );
@@ -64,7 +64,7 @@ export default function BarberDashboard() {
       bg: 'rgba(200, 169, 110, 0.15)',
     },
     {
-      label: 'Receita do Dia',
+      label: 'Receita Confirmada',
       value: formatPrice(revenueToday),
       icon: DollarSign,
       color: 'var(--success)',
@@ -176,7 +176,45 @@ export default function BarberDashboard() {
               </div>
             ) : (
               todayAppointments.map((apt) => (
-                <AppointmentCard key={apt.id} appointment={apt} showDate={false} />
+                <div className="schedule-appointment-row" key={apt.id} style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', position: 'relative', width: '100%' }}>
+                  <AppointmentCard appointment={apt} showDate={false} />
+                  <div className="schedule-actions" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '6px' }}>
+                    {apt.status === 'pendente' && (
+                      <button
+                        className="btn btn-sm btn-primary"
+                        onClick={() => confirmAppointment(apt.id)}
+                      >
+                        <Check size={14} /> Confirmar
+                      </button>
+                    )}
+                    {apt.status === 'confirmado' && (
+                      <button
+                        className="btn btn-sm"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#10b981', color: '#fff', fontWeight: 'bold' }}
+                        onClick={() => completeAppointment(apt.id)}
+                      >
+                        <Check size={14} /> Concluir
+                      </button>
+                    )}
+                    {apt.status === 'concluído' && !apt.paymentReceived && (
+                      <button
+                        className="btn btn-sm"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'var(--accent-primary)', color: 'var(--bg-card)', fontWeight: 'bold' }}
+                        onClick={() => markPaymentReceived(apt.id)}
+                      >
+                        💵 Receber Pagamento
+                      </button>
+                    )}
+                    {(apt.status === 'pendente' || apt.status === 'confirmado') && (
+                      <button
+                        className="btn btn-sm btn-danger"
+                        onClick={() => cancelAppointment(apt.id, 'barber')}
+                      >
+                        <X size={14} /> Cancelar
+                      </button>
+                    )}
+                  </div>
+                </div>
               ))
             )}
           </div>

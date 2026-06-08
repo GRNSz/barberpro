@@ -13,7 +13,8 @@ export default function ProtectedRoute({ children, requiredType }) {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    const redirectPath = requiredType === 'admin' ? '/login/admin' : '/login';
+    return <Navigate to={redirectPath} replace />;
   }
 
   if (requiredType && userType !== requiredType) {

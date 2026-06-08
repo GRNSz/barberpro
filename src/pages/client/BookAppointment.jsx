@@ -1,16 +1,36 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { MOCK_AVAILABLE_SLOTS, formatPrice, getInitials } from '../../utils/mockData';
+import { formatPrice, getInitials } from '../../utils/mockData';
 import { getDayOfWeekLabel, formatDayMonth } from '../../utils/helpers';
 import { ChevronLeft, ChevronRight, Check, Clock, Calendar, ArrowLeft, MapPin, Star } from 'lucide-react';
 import { useData } from '../../contexts/DataContext';
+import { createPortal } from 'react-dom';
 import './BookAppointment.css';
+
+const formatLocalDate = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getAvailableDates = () => {
+  const dates = [];
+  const today = new Date();
+  for (let i = 0; i < 14; i++) {
+    const d = new Date();
+    d.setDate(today.getDate() + i);
+    if (d.getDay() === 0) continue; // Skip Sunday
+    dates.push(formatLocalDate(d));
+  }
+  return dates;
+};
 
 export default function BookAppointment() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const initialBarbershopId = searchParams.get('barbershopId');
-  const { addAppointment, barbershops } = useData();
+  const { addAppointment, barbershops, appointments } = useData();
 
   // Multi-barbershop states
   const [selectedBarbershop, setSelectedBarbershop] = useState(() => {
@@ -30,7 +50,7 @@ export default function BookAppointment() {
   }, [initialBarbershopId, barbershops, selectedBarbershop]);
 
   const [step, setStep] = useState(initialBarbershopId && selectedBarbershop ? 1 : 0);
-  const [selectedService, setSelectedService] = useState(null);
+  const [selectedServices, setSelectedServices] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState(null);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -42,10 +62,52 @@ export default function BookAppointment() {
   }, [selectedBarbershop]);
 
   const availableDates = useMemo(() => {
-    return Object.keys(MOCK_AVAILABLE_SLOTS).sort();
+    return getAvailableDates();
   }, []);
 
-  const availableSlots = selectedDate ? MOCK_AVAILABLE_SLOTS[selectedDate] || [] : [];
+  const getSlotsForDate = (dateStr) => {
+    const d = new Date(dateStr + 'T12:00:00');
+    const day = d.getDay();
+    if (day === 6) { // Saturday
+      return ['08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '14:00', '14:30', '15:00', '15:30', '16:00'];
+    }
+    return ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00'];
+  };
+
+  const availableSlots = useMemo(() => {
+    if (!selectedDate) return [];
+    const baseSlots = getSlotsForDate(selectedDate);
+    
+    // 1. If date is today, filter out past slots
+    const todayStr = formatLocalDate(new Date());
+    let filtered = baseSlots;
+    if (selectedDate === todayStr) {
+      const now = new Date();
+      const currentHour = now.getHours();
+      const currentMinute = now.getMinutes();
+      filtered = baseSlots.filter(slot => {
+        const [slotHour, slotMinute] = slot.split(':').map(Number);
+        if (slotHour > currentHour) return true;
+        if (slotHour === currentHour && slotMinute > currentMinute) return true;
+        return false;
+      });
+    }
+
+    // 2. Filter out already booked slots for the selected barbershop
+    filtered = filtered.filter(slot => {
+      return !appointments.some(apt => {
+        const aptShopId = apt.barbershopId || apt.barbershop_id;
+        const aptDate = apt.date; // YYYY-MM-DD
+        const aptTime = apt.time; // HH:MM
+        return aptShopId === selectedBarbershop?.id &&
+               aptDate === selectedDate &&
+               aptTime === slot &&
+               apt.status !== 'cancelado';
+      });
+    });
+
+    return filtered;
+  }, [selectedDate, appointments, selectedBarbershop]);
 
   const handleNext = () => {
     if (step < 3) setStep(step + 1);
@@ -60,19 +122,34 @@ export default function BookAppointment() {
     if (step > 0) {
       if (step === 3) setSelectedTime(null);
       if (step === 2) setSelectedDate(null);
-      if (step === 1) setSelectedService(null);
+      if (step === 1) setSelectedServices([]);
       setStep(step - 1);
     }
   };
 
   const handleConfirm = () => {
-    addAppointment(selectedBarbershop, selectedService, selectedDate, selectedTime);
+    addAppointment(selectedBarbershop, selectedServices, selectedDate, selectedTime);
     setShowSuccess(true);
+  };
+
+  const totalPrice = useMemo(() => {
+    return selectedServices.reduce((sum, s) => sum + parseFloat(s.price || 0), 0);
+  }, [selectedServices]);
+
+  const handleServiceToggle = (service) => {
+    setSelectedServices(prev => {
+      const exists = prev.some(s => s.id === service.id);
+      if (exists) {
+        return prev.filter(s => s.id !== service.id);
+      } else {
+        return [...prev, service];
+      }
+    });
   };
 
   const canProceed =
     (step === 0 && selectedBarbershop) ||
-    (step === 1 && selectedService) ||
+    (step === 1 && selectedServices.length > 0) ||
     (step === 2 && selectedDate) ||
     (step === 3 && selectedTime);
 
@@ -169,33 +246,36 @@ export default function BookAppointment() {
       {step === 1 && (
         <div className="booking-step animate-fade-in-up">
           <h2 className="booking-step-title">Escolha o serviço</h2>
-          <p className="booking-step-desc">Selecione o serviço que deseja agendar na {selectedBarbershop?.name}</p>
+          <p className="booking-step-desc">Selecione os serviços que deseja agendar na {selectedBarbershop?.name}</p>
           {activeServices.length > 0 ? (
             <div className="services-grid stagger-children">
-              {activeServices.map((service) => (
-                <button
-                  key={service.id}
-                  className={`service-card card ${selectedService?.id === service.id ? 'selected' : ''}`}
-                  onClick={() => setSelectedService(service)}
-                >
-                  <div className="service-card-icon">{service.icon}</div>
-                  <div className="service-card-info">
-                    <span className="service-card-name">{service.name}</span>
-                    <span className="service-card-desc">{service.description}</span>
-                    <div className="service-card-meta">
-                      <span className="service-card-price">{formatPrice(service.price)}</span>
-                      <span className="service-card-duration">
-                        <Clock size={14} /> {service.duration} min
-                      </span>
+              {activeServices.map((service) => {
+                const isSelected = selectedServices.some(s => s.id === service.id);
+                return (
+                  <button
+                    key={service.id}
+                    className={`service-card card ${isSelected ? 'selected' : ''}`}
+                    onClick={() => handleServiceToggle(service)}
+                  >
+                    <div className="service-card-icon">{service.icon}</div>
+                    <div className="service-card-info">
+                      <span className="service-card-name">{service.name}</span>
+                      <span className="service-card-desc">{service.description}</span>
+                      <div className="service-card-meta">
+                        <span className="service-card-price">{formatPrice(service.price)}</span>
+                        <span className="service-card-duration">
+                          <Clock size={14} /> {service.duration} min
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                  {selectedService?.id === service.id && (
-                    <div className="service-check">
-                      <Check size={18} />
-                    </div>
-                  )}
-                </button>
-              ))}
+                    {isSelected && (
+                      <div className="service-check">
+                        <Check size={18} />
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           ) : (
             <div className="empty-state-mini">
@@ -266,7 +346,7 @@ export default function BookAppointment() {
       )}
 
       {/* Bottom Summary Bar */}
-      {(selectedBarbershop || selectedService || selectedDate || selectedTime) && !showSuccess && (
+      {(selectedBarbershop || selectedServices.length > 0 || selectedDate || selectedTime) && !showSuccess && (
         <div className="booking-summary-bar animate-fade-in">
           <div className="booking-summary-info">
             {selectedBarbershop && (
@@ -274,9 +354,9 @@ export default function BookAppointment() {
                 <MapPin size={14} /> {selectedBarbershop.name}
               </span>
             )}
-            {selectedService && (
+            {selectedServices.length > 0 && (
               <span className="summary-item">
-                {selectedService.icon} {selectedService.name}
+                💈 {selectedServices.map(s => s.name).join(', ')}
               </span>
             )}
             {selectedDate && (
@@ -289,8 +369,8 @@ export default function BookAppointment() {
                 <Clock size={14} /> {selectedTime}
               </span>
             )}
-            {selectedService && (
-              <span className="summary-price">{formatPrice(selectedService.price)}</span>
+            {selectedServices.length > 0 && (
+              <span className="summary-price">{formatPrice(totalPrice)}</span>
             )}
           </div>
           {step < 3 ? (
@@ -310,7 +390,7 @@ export default function BookAppointment() {
       )}
 
       {/* Success Modal */}
-      {showSuccess && (
+      {showSuccess && createPortal(
         <div className="modal-overlay">
           <div className="modal booking-success-modal animate-scale-in">
             <div className="success-animation">
@@ -321,10 +401,10 @@ export default function BookAppointment() {
             <h2 className="success-title">Agendamento Confirmado!</h2>
             <div className="success-desc">
               <p className="success-shop-name">{selectedBarbershop?.name}</p>
-              <p className="success-service-name">{selectedService?.name}</p>
+              <p className="success-service-name">{selectedServices.map(s => s.name).join(', ')}</p>
               <p className="success-date-time">{formatDayMonth(selectedDate)} às {selectedTime}</p>
             </div>
-            <p className="success-price">{selectedService && formatPrice(selectedService.price)}</p>
+            <p className="success-price">{formatPrice(totalPrice)}</p>
             <button
               className="btn btn-primary btn-full"
               onClick={() => navigate('/cliente/agendamentos')}
@@ -338,7 +418,8 @@ export default function BookAppointment() {
               Voltar ao Início
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

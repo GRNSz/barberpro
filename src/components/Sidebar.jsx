@@ -54,6 +54,13 @@ export default function Sidebar() {
     navigate('/');
   };
 
+  const handleLogoClick = () => {
+    if (userType === 'barber') navigate('/barbeiro');
+    else if (userType === 'admin') navigate('/admin');
+    else navigate('/cliente');
+    setMobileOpen(false);
+  };
+
   return (
     <>
       {/* Mobile hamburger */}
@@ -71,12 +78,20 @@ export default function Sidebar() {
       )}
 
       <aside className={`sidebar ${mobileOpen ? 'open' : ''}`}>
-        <div className="sidebar-logo">
+        <div 
+          className="sidebar-logo" 
+          onClick={handleLogoClick} 
+          style={{ cursor: 'pointer' }}
+          title="Ir para o início"
+        >
           <span className="sidebar-logo-icon">💈</span>
           <h1>BarberPro</h1>
           <button
             className="sidebar-close btn-icon btn-ghost"
-            onClick={() => setMobileOpen(false)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setMobileOpen(false);
+            }}
             aria-label="Fechar menu"
           >
             <X size={20} />

@@ -21,6 +21,7 @@ import ClientChat from './pages/client/ClientChat';
 import EditProfile from './pages/client/EditProfile';
 import Blog from './pages/client/Blog';
 import AdminDashboard from './pages/AdminDashboard';
+import Notifications from './pages/Notifications';
 
 // Barber pages
 import BarberDashboard from './pages/barber/BarberDashboard';
@@ -63,7 +64,21 @@ function App() {
               {/* Public */}
               <Route path="/" element={<AuthenticatedRedirect />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/login/admin" element={<Login />} />
               <Route path="/registro" element={<Register />} />
+              <Route path="/registro/admin" element={<Register />} />
+
+              {/* Shared Protected Routes */}
+              <Route
+                path="/notificacoes"
+                element={
+                  <ProtectedRoute>
+                    <AppLayout title="Notificações">
+                      <Notifications />
+                    </AppLayout>
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Client Routes */}
               <Route

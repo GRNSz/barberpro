@@ -8,7 +8,7 @@ import './Navbar.css';
 
 export default function Navbar({ title }) {
   const { userType } = useAuth();
-  const { notifications, markNotificationsAsRead } = useData();
+  const { notifications, markNotificationsAsRead, clearNotifications } = useData();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
@@ -103,7 +103,7 @@ export default function Navbar({ title }) {
             )}
           </button>
 
-          {isOpen && (
+           {isOpen && (
             <div
               className="notifications-dropdown animate-scale-in"
               onClick={handleDropdownClick}
@@ -112,7 +112,19 @@ export default function Navbar({ title }) {
             >
               <div className="notifications-header">
                 <h3>Notificações</h3>
-                <div className="notifications-header-actions">
+                <div className="notifications-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {notifications.length > 0 && (
+                    <button
+                      className="btn btn-sm btn-ghost"
+                      style={{ padding: '2px 6px', fontSize: '0.75rem', minHeight: 'auto', color: 'var(--text-muted)' }}
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        await clearNotifications();
+                      }}
+                    >
+                      Limpar tudo
+                    </button>
+                  )}
                   {unread > 0 && (
                     <span className="notifications-unread-count">{unread} nova{unread > 1 ? 's' : ''}</span>
                   )}
@@ -151,6 +163,19 @@ export default function Navbar({ title }) {
                     <p>Tudo em dia! Sem notificações.</p>
                   </div>
                 )}
+              </div>
+              <div className="notifications-footer" style={{ borderTop: '1px solid var(--border)', padding: '8px', display: 'flex', justifyContent: 'center' }}>
+                <button
+                  className="btn btn-sm btn-ghost"
+                  style={{ width: '100%', fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--accent-primary)' }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsOpen(false);
+                    navigate('/notificacoes');
+                  }}
+                >
+                  Ver todas as notificações
+                </button>
               </div>
             </div>
           )}

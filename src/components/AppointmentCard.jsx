@@ -4,14 +4,15 @@ import { Clock, User, Heart } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import { useState } from 'react';
-import { downloadICS } from '../utils/calendar';
+import { useNavigate } from 'react-router-dom';
 import './AppointmentCard.css';
 
 export default function AppointmentCard({ appointment, showDate = true, onClick }) {
   const status = STATUS_MAP[appointment.status] || { label: appointment.status, color: 'info' };
   const { userType } = useAuth();
-  const { googleCalendarSynced, updateAppointmentNotes } = useData();
+  const { googleCalendarSynced, updateAppointmentNotes, startChatWithClient } = useData();
   const [expanded, setExpanded] = useState(false);
+  const navigate = useNavigate();
 
   const client = userType === 'barber' ? MOCK_CLIENTS.find((c) => c.id === appointment.clientId) : null;
   const whatsappNumber = client?.whatsapp;
@@ -20,10 +21,54 @@ export default function AppointmentCard({ appointment, showDate = true, onClick 
     userType === 'barber' ? (appointment.barberNotes || '') : (appointment.clientNotes || '')
   );
 
+  const handleSaveToGoogleCalendar = (e) => {
+    e.stopPropagation();
+    const title = encodeURIComponent(`💈 BarberPro — ${appointment.service}`);
+    
+    // Format dates: YYYYMMDDTHHMMSS
+    const dateParts = appointment.date.split('-'); // [YYYY, MM, DD]
+    const timeParts = appointment.time.split(':'); // [HH, MM]
+    
+    const year = dateParts[0];
+    const month = dateParts[1];
+    const day = dateParts[2];
+    const hour = timeParts[0];
+    const minute = timeParts[1];
+    
+    const startDateStr = `${year}${month}${day}T${hour}${minute}00`;
+    
+    // Calculate end time (add 45 minutes)
+    const startDt = new Date(`${appointment.date}T${appointment.time}:00`);
+    const endDt = new Date(startDt.getTime() + 45 * 60 * 1000);
+    
+    const endYear = endDt.getFullYear();
+    const endMonth = String(endDt.getMonth() + 1).padStart(2, '0');
+    const endDay = String(endDt.getDate()).padStart(2, '0');
+    const endHour = String(endDt.getHours()).padStart(2, '0');
+    const endMinute = String(endDt.getMinutes()).padStart(2, '0');
+    
+    const endDateStr = `${endYear}${endMonth}${endDay}T${endHour}${endMinute}00`;
+    
+    const details = encodeURIComponent(`Agendamento de ${appointment.service} na barbearia ${appointment.barbershopName}.\nStatus: ${appointment.status}`);
+    const location = encodeURIComponent(appointment.barbershopName);
+    
+    const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startDateStr}/${endDateStr}&details=${details}&location=${location}&ctz=America/Sao_Paulo`;
+    
+    window.open(googleCalendarUrl, '_blank');
+  };
+
   const handleSaveNotes = (e) => {
     e.stopPropagation();
     updateAppointmentNotes(appointment.id, localNotes, userType);
     alert('Anotação salva com sucesso!');
+  };
+
+  const handleClientNameClick = async (e) => {
+    e.stopPropagation();
+    if (appointment.clientId && appointment.clientName) {
+      await startChatWithClient(appointment.clientId, appointment.clientName);
+      navigate('/barbeiro/chat', { state: { activeConvId: appointment.clientId } });
+    }
   };
 
   const isGoogleSynced = appointment.googleSynced || googleCalendarSynced;
@@ -38,7 +83,29 @@ export default function AppointmentCard({ appointment, showDate = true, onClick 
         </div>
         <div className="appointment-card-center">
           <div className="appointment-card-name" style={{ display: 'flex', alignItems: 'center' }}>
-            {appointment.clientName}
+            {userType === 'barber' ? (
+              <button
+                onClick={handleClientNameClick}
+                className="appointment-client-chat-btn"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  font: 'inherit',
+                  color: 'var(--accent-primary)',
+                  textDecoration: 'underline',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontWeight: 'bold',
+                  display: 'inline'
+                }}
+                title="Iniciar chat com o cliente"
+              >
+                {appointment.clientName}
+              </button>
+            ) : (
+              appointment.clientName
+            )}
             {whatsappNumber && (
               <a
                 href={`https://wa.me/${whatsappNumber}`}
@@ -98,10 +165,7 @@ export default function AppointmentCard({ appointment, showDate = true, onClick 
           <button
             className="btn btn-ghost btn-sm"
             style={{ padding: '2px 8px', fontSize: '0.75rem', color: 'var(--accent-primary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-            onClick={(e) => {
-              e.stopPropagation();
-              downloadICS(appointment);
-            }}
+            onClick={handleSaveToGoogleCalendar}
           >
             📅 Salvar na Agenda
           </button>

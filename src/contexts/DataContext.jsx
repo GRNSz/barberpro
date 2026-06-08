@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import { database } from '../lib/firebase';
-import { ref, onValue, push, set, serverTimestamp, off, update } from 'firebase/database';
+import { ref, onValue, push, set, serverTimestamp, off, update, get } from 'firebase/database';
 
 const DataContext = createContext();
 
@@ -150,6 +150,7 @@ export function DataProvider({ children }) {
       : `clients/${user.uid}/notifications`;
 
     const notifRef = ref(database, notifPath);
+    let isInitial = true;
     const notifListener = onValue(notifRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
@@ -161,7 +162,7 @@ export function DataProvider({ children }) {
         list.forEach(n => {
           const id = n.firebaseKey;
           if (!seenNotifIds.current.has(id)) {
-            if (!n.read) {
+            if (!isInitial && !n.read) {
               hasNewUnread = true;
               showDesktopNotification(n.title || 'BarberPro', n.message || '');
             }
@@ -177,6 +178,7 @@ export function DataProvider({ children }) {
       } else {
         setNotifications([]);
       }
+      isInitial = false;
     });
     listenersRef.current.push(() => off(notifRef, 'value', notifListener));
 
@@ -232,9 +234,14 @@ export function DataProvider({ children }) {
   }, [favorites]);
 
   // ─── ADD APPOINTMENT ─────────────────────────────────────────────────────
-  const addAppointment = useCallback(async (barbershop, service, date, time, notes = '') => {
+  const addAppointment = useCallback(async (barbershop, services, date, time, notes = '') => {
     if (!user) return null;
     const googleToken = localStorage.getItem('barberpro_google_access_token');
+
+    const servicesArray = Array.isArray(services) ? services : [services];
+    const serviceName = servicesArray.map(s => s.name).join(', ');
+    const serviceId = servicesArray.map(s => s.id).join(', ');
+    const totalPrice = servicesArray.reduce((sum, s) => sum + parseFloat(s.price || 0), 0);
 
     try {
       const response = await fetch('/api/appointments/new', {
@@ -246,10 +253,10 @@ export function DataProvider({ children }) {
         body: JSON.stringify({
           barbershopId: barbershop.id || barbershop.owner_uid,
           barbershopName: barbershop.name,
-          service: service.name,
-          serviceId: service.id,
+          service: serviceName,
+          serviceId: serviceId,
           date, time,
-          price: service.price,
+          price: totalPrice,
           notes,
           clientId: user.uid,
           clientName: user.name
@@ -274,7 +281,8 @@ export function DataProvider({ children }) {
         price: parseFloat(data.price),
         clientNotes: data.client_notes,
         barberNotes: data.barber_notes,
-        googleSynced: data.google_synced
+        googleSynced: data.google_synced,
+        paymentReceived: data.payment_received || false
       };
 
       setAppointments(prev => [formatted, ...prev]);
@@ -493,17 +501,6 @@ export function DataProvider({ children }) {
       convId: isSenderBarber ? barberId : clientId
     });
 
-    // Update local state
-    setMessages(prev => ({
-      ...prev,
-      [convId]: [...(prev[convId] || []), msgData]
-    }));
-    setConversations(prev =>
-      prev.map(c => c.id === convId
-        ? { ...c, lastMessage: text, lastMessageTime: new Date().toISOString() }
-        : c
-      )
-    );
   }, [userType]);
 
   // ─── LISTEN TO CHAT MESSAGES ──────────────────────────────────────────────
@@ -549,6 +546,19 @@ export function DataProvider({ children }) {
     }
   }, [user, userType, notifications]);
 
+  // ─── CLEAR ALL NOTIFICATIONS ──────────────────────────────────────────────
+  const clearNotifications = useCallback(async () => {
+    if (!user) return;
+    const notifType = userType === 'barber' ? 'barbers' : 'clients';
+    const notifRef = ref(database, `${notifType}/${user.uid}/notifications`);
+    try {
+      await set(notifRef, null);
+      setNotifications([]);
+    } catch (e) {
+      console.warn('Could not clear notifications in Firebase:', e);
+    }
+  }, [user, userType]);
+
   // ─── TOGGLE FAVORITE ─────────────────────────────────────────────────────
   const toggleFavorite = useCallback((barbershopId) => {
     setFavorites(prev =>
@@ -580,6 +590,66 @@ export function DataProvider({ children }) {
       console.error('Error saving notes:', err);
     }
   }, []);
+
+  // ─── START CHAT WITH CLIENT ──────────────────────────────────────────────
+  const startChatWithClient = useCallback(async (clientId, clientName) => {
+    if (!user || userType !== 'barber') return null;
+
+    try {
+      const barberConvRef = ref(database, `barbers/${user.uid}/conversations/${clientId}`);
+      const snapshot = await get(barberConvRef);
+      if (!snapshot.exists()) {
+        await set(barberConvRef, {
+          id: clientId,
+          clientId: clientId,
+          clientName: clientName,
+          lastMessage: 'Conversa iniciada',
+          lastMessageTime: new Date().toISOString(),
+          unreadCount: 0
+        });
+
+        const clientConvRef = ref(database, `clients/${clientId}/conversations/${user.uid}`);
+        await set(clientConvRef, {
+          id: user.uid,
+          barberId: user.uid,
+          clientName: user.barbershopName || user.name || 'Barbeiro',
+          lastMessage: 'Conversa iniciada',
+          lastMessageTime: new Date().toISOString(),
+          unreadCount: 0
+        });
+      }
+      return clientId;
+    } catch (err) {
+      console.error('Error starting chat with client:', err);
+      return null;
+    }
+  }, [user, userType]);
+
+  // ─── MARK PAYMENT RECEIVED ────────────────────────────────────────────────
+  const markPaymentReceived = useCallback(async (appointmentId) => {
+    try {
+      const response = await fetch(`/api/appointments/payment/${appointmentId}`, { method: 'POST' });
+      if (!response.ok) throw new Error('Erro ao registrar pagamento');
+      const data = await response.json();
+
+      setAppointments(prev =>
+        prev.map(a => a.id === appointmentId ? { ...a, paymentReceived: true } : a)
+      );
+
+      const apt = appointments.find(a => a.id === appointmentId);
+      if (apt) {
+        // Trigger client appointment update
+        const clientAptsRef = ref(database, `clients/${apt.clientId}/appointments`);
+        await set(clientAptsRef, { lastUpdate: Date.now(), trigger: appointmentId });
+        
+        // Trigger barber appointments node update for sync
+        const barberAptsRef = ref(database, `barbers/${apt.barbershopId}/appointments`);
+        await set(barberAptsRef, { lastUpdate: Date.now(), trigger: appointmentId });
+      }
+    } catch (err) {
+      console.error('Error marking payment received:', err);
+    }
+  }, [appointments]);
 
   // ─── GOOGLE CALENDAR SYNC ────────────────────────────────────────────────
   const syncGoogleCalendar = useCallback(() => {
@@ -634,8 +704,11 @@ export function DataProvider({ children }) {
         addMessage,
         subscribeToChat,
         markNotificationsAsRead,
+        clearNotifications,
         syncGoogleCalendar,
         updateAppointmentNotes,
+        startChatWithClient,
+        markPaymentReceived,
         fetchLoyaltyCuts,
         fetchBarbershops,
         fetchAppointments,

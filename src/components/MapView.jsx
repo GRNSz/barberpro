@@ -18,14 +18,26 @@ const goldIcon = new Icon({
   popupAnchor: [0, -44],
 });
 
+const userIcon = new Icon({
+  iconUrl: 'data:image/svg+xml;utf8,' + encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+      <circle cx="16" cy="16" r="10" fill="#3b82f6" fill-opacity="0.3" stroke="#3b82f6" stroke-width="2"/>
+      <circle cx="16" cy="16" r="5" fill="#3b82f6" stroke="#ffffff" stroke-width="1.5"/>
+    </svg>
+  `),
+  iconSize: [32, 32],
+  iconAnchor: [16, 16],
+});
 
-export default function MapView({ barbershops, center, zoom = 14, height = '400px' }) {
+
+export default function MapView({ barbershops, center, userLocation, zoom = 14, height = '400px' }) {
   const navigate = useNavigate();
-  const mapCenter = center || [-23.5505, -46.6333];
+  const mapCenter = userLocation || center || [-23.5505, -46.6333];
 
   return (
     <div className="map-container" style={{ height }}>
       <MapContainer
+        key={mapCenter.join(',')}
         center={mapCenter}
         zoom={zoom}
         className="leaflet-map"
@@ -35,6 +47,13 @@ export default function MapView({ barbershops, center, zoom = 14, height = '400p
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+        {userLocation && (
+          <Marker position={userLocation} icon={userIcon}>
+            <Popup>
+              <strong>Você está aqui</strong>
+            </Popup>
+          </Marker>
+        )}
         {barbershops.map((shop) => (
           <Marker key={shop.id} position={[shop.lat, shop.lng]} icon={goldIcon}>
             <Popup className="map-popup">
@@ -43,7 +62,7 @@ export default function MapView({ barbershops, center, zoom = 14, height = '400p
                 <div className="map-popup-rating">
                   <Star size={14} fill="#C8A96E" color="#C8A96E" />
                   <span>{shop.rating}</span>
-                  <span className="map-popup-reviews">({shop.totalReviews})</span>
+                  <span className="map-popup-reviews">({shop.totalReviews || shop.total_reviews || 0})</span>
                 </div>
                 <div className="map-popup-address">
                   <MapPin size={12} />

@@ -26,7 +26,7 @@ function generateWeekDays(startDateStr) {
 export default function ManageSchedule() {
   const [selectedDate, setSelectedDate] = useState(BASE_DATE);
   const [weekStart, setWeekStart] = useState(BASE_DATE);
-  const { appointments, confirmAppointment, cancelAppointment } = useData();
+  const { appointments, confirmAppointment, cancelAppointment, completeAppointment, markPaymentReceived } = useData();
 
   const weekDays = useMemo(() => generateWeekDays(weekStart), [weekStart]);
 
@@ -125,6 +125,25 @@ export default function ManageSchedule() {
                     >
                       <Check size={16} />
                       Confirmar
+                    </button>
+                  )}
+                  {apt.status === 'confirmado' && (
+                    <button
+                      className="btn btn-sm"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#10b981', color: '#fff', fontWeight: 'bold' }}
+                      onClick={() => completeAppointment(apt.id)}
+                    >
+                      <Check size={16} />
+                      Concluir
+                    </button>
+                  )}
+                  {apt.status === 'concluído' && !apt.paymentReceived && (
+                    <button
+                      className="btn btn-sm"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'var(--accent-primary)', color: 'var(--bg-card)', fontWeight: 'bold' }}
+                      onClick={() => markPaymentReceived(apt.id)}
+                    >
+                      💵 Receber Pagamento
                     </button>
                   )}
                   {(apt.status === 'pendente' || apt.status === 'confirmado') && (

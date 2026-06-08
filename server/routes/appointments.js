@@ -1,7 +1,20 @@
 import express from 'express';
 import pool from '../db.js';
+import jwt from 'jsonwebtoken';
 
 const router = express.Router();
+const JWT_SECRET = process.env.JWT_SECRET || 'barberpro_jwt_secret_key_999';
+
+// Helper to get user from cookie
+const getUser = (req) => {
+  try {
+    const token = req.cookies.token;
+    if (!token) return null;
+    return jwt.verify(token, JWT_SECRET);
+  } catch {
+    return null;
+  }
+};
 
 // Helper to push to Google Calendar API from Backend using REST
 const addEventToGoogleCalendar = async (appointment, token) => {
@@ -41,8 +54,34 @@ const addEventToGoogleCalendar = async (appointment, token) => {
 
 // Get all appointments
 router.get('/', async (req, res) => {
+  const decoded = getUser(req);
+  if (!decoded) {
+    return res.status(401).json({ error: 'Não autorizado' });
+  }
+
   try {
-    const result = await pool.query('SELECT * FROM agendamentos ORDER BY date DESC, time DESC');
+    let result;
+    if (decoded.role === 'admin') {
+      result = await pool.query('SELECT * FROM agendamentos ORDER BY date DESC, time DESC');
+    } else if (decoded.role === 'barber') {
+      // Find barbershop owned by this barber
+      const shopRes = await pool.query('SELECT id FROM barbearias WHERE owner_uid = $1', [decoded.uid]);
+      if (shopRes.rows.length === 0) {
+        return res.json([]);
+      }
+      const shopId = shopRes.rows[0].id;
+      result = await pool.query(
+        'SELECT * FROM agendamentos WHERE barbershop_id = $1 ORDER BY date DESC, time DESC',
+        [shopId]
+      );
+    } else {
+      // Client role
+      result = await pool.query(
+        'SELECT * FROM agendamentos WHERE client_id = $1 ORDER BY date DESC, time DESC',
+        [decoded.uid]
+      );
+    }
+
     // Map database fields to frontend fields for backwards-compatibility
     const mapped = result.rows.map((row) => ({
       id: row.id,
@@ -59,7 +98,8 @@ router.get('/', async (req, res) => {
       price: parseFloat(row.price),
       clientNotes: row.client_notes,
       barberNotes: row.barber_notes,
-      googleSynced: row.google_synced
+      googleSynced: row.google_synced,
+      paymentReceived: row.payment_received
     }));
     return res.json(mapped);
   } catch (err) {
@@ -80,6 +120,16 @@ router.post('/new', async (req, res) => {
   const id = `apt-${Date.now()}`;
 
   try {
+    // Collision check: check for any active (not cancelled) appointment for the same shop, date, and time
+    const collisionCheck = await pool.query(
+      "SELECT id FROM agendamentos WHERE barbershop_id = $1 AND date = $2 AND time = $3 AND status != 'cancelado'",
+      [barbershopId, date, time]
+    );
+
+    if (collisionCheck.rows.length > 0) {
+      return res.status(409).json({ error: 'Este horário já foi reservado por outro cliente.' });
+    }
+
     // Insert into PostgreSQL
     const result = await pool.query(
       `INSERT INTO agendamentos 
@@ -193,6 +243,27 @@ router.post('/cancel/:id', async (req, res) => {
   } catch (err) {
     console.error('Error cancelling appointment:', err.message);
     return res.status(500).json({ error: 'Erro ao cancelar agendamento' });
+  }
+});
+
+// Mark payment received
+router.post('/payment/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const result = await pool.query(
+      "UPDATE agendamentos SET payment_received = TRUE WHERE id = $1 RETURNING *",
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Agendamento não encontrado' });
+    }
+
+    return res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error marking payment received:', err.message);
+    return res.status(500).json({ error: 'Erro ao registrar pagamento' });
   }
 });
 

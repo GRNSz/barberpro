@@ -13,7 +13,8 @@ export default function Register() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [userType, setUserType] = useState('client');
+  const isAdminRoute = window.location.pathname.endsWith('/admin');
+  const [userType, setUserType] = useState(isAdminRoute ? 'admin' : 'client');
   const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
@@ -63,20 +64,26 @@ export default function Register() {
         <p className="text-body">Comece a usar o BarberPro agora mesmo</p>
 
         {/* User type toggle */}
-        <div className="tabs mt-lg">
-          <button
-            className={`tab ${userType === 'client' ? 'active' : ''}`}
-            onClick={() => setUserType('client')}
-          >
-            Sou Cliente
-          </button>
-          <button
-            className={`tab ${userType === 'barber' ? 'active' : ''}`}
-            onClick={() => setUserType('barber')}
-          >
-            Sou Barbeiro
-          </button>
-        </div>
+        {isAdminRoute ? (
+          <div className="badge badge-accent mt-md" style={{ alignSelf: 'center', width: 'fit-content', padding: '6px 12px', borderRadius: 'var(--radius)', fontWeight: 'bold' }}>
+            Acesso Administrativo
+          </div>
+        ) : (
+          <div className="tabs mt-lg">
+            <button
+              className={`tab ${userType === 'client' ? 'active' : ''}`}
+              onClick={() => setUserType('client')}
+            >
+              Sou Cliente
+            </button>
+            <button
+              className={`tab ${userType === 'barber' ? 'active' : ''}`}
+              onClick={() => setUserType('barber')}
+            >
+              Sou Barbeiro
+            </button>
+          </div>
+        )}
 
         {error && <div className="auth-error">{error}</div>}
 
@@ -180,7 +187,7 @@ export default function Register() {
         </button>
 
         <p className="auth-footer-text">
-          Já tem uma conta? <Link to="/login" className="auth-link">Fazer login</Link>
+          Já tem uma conta? <Link to={isAdminRoute ? "/login/admin" : "/login"} className="auth-link">Fazer login</Link>
         </p>
       </div>
     </div>

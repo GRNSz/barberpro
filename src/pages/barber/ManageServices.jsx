@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { formatPrice } from '../../utils/mockData';
 import Navbar from '../../components/Navbar';
 import { Plus, Pencil, Trash2, Clock, X, Scissors } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import './ManageServices.css';
 
 const emptyService = { name: '', price: '', duration: '', description: '' };
@@ -236,7 +237,7 @@ export default function ManageServices() {
         </div>
 
         {/* Modal */}
-        {modalOpen && (
+        {modalOpen && createPortal(
           <div className="modal-overlay" onClick={closeModal}>
             <div className="modal animate-scale-in" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
@@ -309,7 +310,8 @@ export default function ManageServices() {
                 </button>
               </form>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
     </>

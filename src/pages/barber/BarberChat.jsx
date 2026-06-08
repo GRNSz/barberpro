@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useData } from '../../contexts/DataContext';
 import { getInitials } from '../../utils/mockData';
@@ -17,6 +18,13 @@ export default function BarberChat() {
   const [searchTerm, setSearchTerm] = useState('');
   const messagesEndRef = useRef(null);
   const unsubscribeRef = useRef(null);
+  const location = useLocation();
+ 
+  useEffect(() => {
+    if (location.state?.activeConvId) {
+      setSelectedConvId(location.state.activeConvId);
+    }
+  }, [location.state]);
 
   // Filter conversations by search
   const filteredConversations = useMemo(() =>

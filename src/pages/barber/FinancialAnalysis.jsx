@@ -6,9 +6,23 @@ import {
   TrendingUp, TrendingDown, DollarSign, Plus, Trash2, 
   Calendar, Briefcase, Percent, PieChart, X, HelpCircle
 } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import './FinancialAnalysis.css';
 
-const CATEGORIES = ['Aluguel', 'Produtos', 'Energia', 'Marketing', 'Outros'];
+const EXPENSE_CATEGORIES = ['Aluguel', 'Produtos', 'Energia', 'Marketing', 'Salários', 'Outros'];
+const REVENUE_CATEGORIES = ['Serviços', 'Produtos', 'Comissão', 'Outros'];
+const ALL_CATEGORIES = Array.from(new Set([...EXPENSE_CATEGORIES, ...REVENUE_CATEGORIES]));
+
+const CATEGORY_COLORS = {
+  Aluguel: '#ef4444',
+  Produtos: '#3b82f6',
+  Energia: '#f59e0b',
+  Marketing: '#a855f7',
+  Salários: '#ec4899',
+  Serviços: '#10b981',
+  Comissão: '#8b5cf6',
+  Outros: '#6b7280'
+};
 
 export default function FinancialAnalysis() {
   const { user } = useAuth();
@@ -24,8 +38,18 @@ export default function FinancialAnalysis() {
   const [description, setDescription] = useState('');
   const [value, setValue] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [category, setCategory] = useState('Outros');
+  const [category, setCategory] = useState(EXPENSE_CATEGORIES[0]);
+  const [type, setType] = useState('despesa');
   const [saving, setSaving] = useState(false);
+
+  // Dynamic category list reset when type changes
+  useEffect(() => {
+    if (type === 'despesa') {
+      setCategory(EXPENSE_CATEGORIES[0]);
+    } else {
+      setCategory(REVENUE_CATEGORIES[0]);
+    }
+  }, [type]);
 
   // Fetch costs from DB
   const fetchCosts = useCallback(async () => {
@@ -49,16 +73,22 @@ export default function FinancialAnalysis() {
 
   // --- Calculations ---
 
-  // Gains from completed and confirmed appointments
+  // Gains from completed and confirmed appointments that were paid + manual revenues
   const gains = useMemo(() => {
-    return appointments
-      .filter((a) => a.status === 'concluído' || a.status === 'confirmado')
+    const appointmentGains = appointments
+      .filter((a) => a.paymentReceived)
       .reduce((sum, a) => sum + parseFloat(a.price || 0), 0);
-  }, [appointments]);
+    const manualRevenues = costs
+      .filter((c) => c.type === 'receita')
+      .reduce((sum, c) => sum + parseFloat(c.value || 0), 0);
+    return appointmentGains + manualRevenues;
+  }, [appointments, costs]);
 
-  // Total costs
+  // Total costs (only despesas)
   const totalCosts = useMemo(() => {
-    return costs.reduce((sum, c) => sum + parseFloat(c.value || 0), 0);
+    return costs
+      .filter((c) => c.type === 'despesa')
+      .reduce((sum, c) => sum + parseFloat(c.value || 0), 0);
   }, [costs]);
 
   const netProfit = gains - totalCosts;
@@ -68,20 +98,53 @@ export default function FinancialAnalysis() {
     return (netProfit / gains) * 100;
   }, [gains, netProfit]);
 
-  // Filtered expense items
-  const filteredCosts = useMemo(() => {
-    if (filterCategory === 'Todos') return costs;
-    return costs.filter((c) => c.category === filterCategory);
-  }, [costs, filterCategory]);
+  // Filtered expense/revenue items and unified ledger
+  const mergedTransactions = useMemo(() => {
+    const manualItems = costs.map(c => ({
+      id: c.id,
+      description: c.description,
+      value: parseFloat(c.value || 0),
+      date: c.date,
+      category: c.category,
+      type: c.type || 'despesa',
+      isManual: true
+    }));
 
-  // Category breakdown
-  const categoryBreakdown = useMemo(() => {
-    const breakdown = CATEGORIES.reduce((acc, cat) => {
+    const appointmentItems = appointments
+      .filter(a => a.paymentReceived)
+      .map(a => ({
+        id: a.id,
+        description: `${a.clientName} — ${a.service}`,
+        value: parseFloat(a.price || 0),
+        date: a.date,
+        category: 'Serviços',
+        type: 'receita',
+        isManual: false
+      }));
+
+    const merged = [...manualItems, ...appointmentItems];
+    return merged.sort((a, b) => {
+      const dateCompare = b.date.localeCompare(a.date);
+      if (dateCompare !== 0) return dateCompare;
+      return b.id.localeCompare(a.id);
+    });
+  }, [costs, appointments]);
+
+  const filteredCosts = useMemo(() => {
+    if (filterCategory === 'Todos') return mergedTransactions;
+    return mergedTransactions.filter((c) => c.category === filterCategory);
+  }, [mergedTransactions, filterCategory]);
+
+  // Expense Category breakdown
+  const expenseCategoryBreakdown = useMemo(() => {
+    const breakdown = EXPENSE_CATEGORIES.reduce((acc, cat) => {
       acc[cat] = 0;
       return acc;
     }, {});
 
-    costs.forEach((c) => {
+    const despesas = costs.filter((c) => c.type === 'despesa');
+
+    despesas.forEach((c) => {
       if (breakdown[c.category] !== undefined) {
         breakdown[c.category] += parseFloat(c.value || 0);
       } else {
@@ -89,11 +152,45 @@ export default function FinancialAnalysis() {
       }
     });
 
+    const totalDespesas = despesas.reduce((sum, c) => sum + parseFloat(c.value || 0), 0);
+
     return Object.entries(breakdown).map(([name, val]) => {
-      const pct = totalCosts > 0 ? (val / totalCosts) * 100 : 0;
+      const pct = totalDespesas > 0 ? (val / totalDespesas) * 100 : 0;
       return { name, value: val, percentage: pct };
     }).sort((a, b) => b.value - a.value);
-  }, [costs, totalCosts]);
+  }, [costs]);
+
+  // Revenue Category breakdown (includes manual revenues + appointment gains)
+  const revenueCategoryBreakdown = useMemo(() => {
+    const breakdown = REVENUE_CATEGORIES.reduce((acc, cat) => {
+      acc[cat] = 0;
+      return acc;
+    }, {});
+
+    // Manual revenues
+    const manualRevenues = costs.filter((c) => c.type === 'receita');
+    manualRevenues.forEach((c) => {
+      if (breakdown[c.category] !== undefined) {
+        breakdown[c.category] += parseFloat(c.value || 0);
+      } else {
+        breakdown['Outros'] += parseFloat(c.value || 0);
+      }
+    });
+
+    // Appointment gains go to 'Serviços' category
+    const appointmentGains = appointments
+      .filter((a) => a.paymentReceived)
+      .reduce((sum, a) => sum + parseFloat(a.price || 0), 0);
+    
+    breakdown['Serviços'] = (breakdown['Serviços'] || 0) + appointmentGains;
+
+    const totalRevenues = manualRevenues.reduce((sum, c) => sum + parseFloat(c.value || 0), 0) + appointmentGains;
+
+    return Object.entries(breakdown).map(([name, val]) => {
+      const pct = totalRevenues > 0 ? (val / totalRevenues) * 100 : 0;
+      return { name, value: val, percentage: pct };
+    }).sort((a, b) => b.value - a.value);
+  }, [appointments, costs]);
 
   // Monthly groups for visual bar charts (last 6 months)
   const monthlyData = useMemo(() => {
@@ -115,9 +212,9 @@ export default function FinancialAnalysis() {
       };
     }
 
-    // Add gains
+    // Add gains from paid appointments
     appointments
-      .filter((a) => a.status === 'concluído' || a.status === 'confirmado')
+      .filter((a) => a.paymentReceived)
       .forEach((a) => {
         const key = a.date.slice(0, 7); // YYYY-MM
         if (data[key]) {
@@ -125,11 +222,15 @@ export default function FinancialAnalysis() {
         }
       });
 
-    // Add costs
+    // Add costs and manual revenues from ledger
     costs.forEach((c) => {
       const key = c.date.slice(0, 7); // YYYY-MM
       if (data[key]) {
-        data[key].costs += parseFloat(c.value || 0);
+        if (c.type === 'receita') {
+          data[key].gains += parseFloat(c.value || 0);
+        } else {
+          data[key].costs += parseFloat(c.value || 0);
+        }
       }
     });
 
@@ -143,6 +244,7 @@ export default function FinancialAnalysis() {
     setValue('');
     setDate(new Date().toISOString().split('T')[0]);
     setCategory('Outros');
+    setType('despesa');
     setModalOpen(true);
   };
 
@@ -152,7 +254,7 @@ export default function FinancialAnalysis() {
 
   const handleAddCostSubmit = async (e) => {
     e.preventDefault();
-    if (!description || !value || !date || !category) return;
+    if (!description || !value || !date || !category || !type) return;
     setSaving(true);
 
     try {
@@ -163,7 +265,8 @@ export default function FinancialAnalysis() {
           description,
           value: parseFloat(value),
           date,
-          category
+          category,
+          type
         })
       });
       if (res.ok) {
@@ -172,7 +275,7 @@ export default function FinancialAnalysis() {
         handleCloseModal();
       } else {
         const err = await res.json();
-        alert(err.error || 'Erro ao salvar despesa.');
+        alert(err.error || 'Erro ao salvar transação.');
       }
     } catch (err) {
       console.error(err);
@@ -214,7 +317,7 @@ export default function FinancialAnalysis() {
         </div>
         <button className="btn btn-primary" onClick={handleOpenModal}>
           <Plus size={18} />
-          Lançar Despesa
+          Lançar Transação
         </button>
       </div>
 
@@ -281,7 +384,7 @@ export default function FinancialAnalysis() {
             >
               Todos
             </button>
-            {CATEGORIES.map(cat => (
+            {ALL_CATEGORIES.map(cat => (
               <button
                 key={cat}
                 className={`expenses-filter-btn ${filterCategory === cat ? 'active' : ''}`}
@@ -296,18 +399,23 @@ export default function FinancialAnalysis() {
           <div className="expenses-list">
             {loadingCosts ? (
               <div className="empty-state-mini">
-                <p>Carregando despesas...</p>
+                <p>Carregando transações...</p>
               </div>
             ) : filteredCosts.length === 0 ? (
               <div className="empty-state-mini">
                 <HelpCircle size={32} style={{ opacity: 0.3, marginBottom: '8px' }} />
-                <p className="text-muted text-small">Nenhuma despesa lançada nesta categoria.</p>
+                <p className="text-muted text-small">Nenhuma transação lançada nesta categoria.</p>
               </div>
             ) : (
               filteredCosts.map(cost => (
-                <div className="expense-item" key={cost.id}>
+                <div className="expense-item" key={cost.id} style={{ borderLeft: cost.type === 'receita' ? '4px solid #10b981' : '4px solid #ef4444' }}>
                   <div className="expense-details">
-                    <span className="expense-desc">{cost.description}</span>
+                    <span className="expense-desc" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      {cost.description}
+                      <span className={`badge badge-${cost.type === 'receita' ? 'success' : 'danger'}`} style={{ fontSize: '0.625rem', padding: '2px 6px' }}>
+                        {cost.type === 'receita' ? 'Receita' : 'Despesa'}
+                      </span>
+                    </span>
                     <div className="expense-meta">
                       <span className={`expense-category-badge ${getCategoryClass(cost.category)}`}>
                         {cost.category}
@@ -317,14 +425,18 @@ export default function FinancialAnalysis() {
                     </div>
                   </div>
                   <div className="expense-right">
-                    <span className="expense-value">{formatPrice(cost.value)}</span>
-                    <button 
-                      className="btn-icon btn-ghost expense-delete-btn"
-                      onClick={() => handleDeleteCost(cost.id)}
-                      aria-label="Excluir despesa"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                    <span className="expense-value" style={{ color: cost.type === 'receita' ? '#10b981' : '#ef4444', fontWeight: 'bold' }}>
+                      {cost.type === 'receita' ? '+' : '-'} {formatPrice(cost.value)}
+                    </span>
+                     {cost.isManual && (
+                      <button 
+                        className="btn-icon btn-ghost expense-delete-btn"
+                        onClick={() => handleDeleteCost(cost.id)}
+                        aria-label="Excluir transação"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))
@@ -379,54 +491,80 @@ export default function FinancialAnalysis() {
           </div>
 
           {/* Category Breakdown Progress indicators */}
-          <div className="category-breakdown">
-            <h2 className="financial-section-title">
-              <PieChart size={20} className="text-accent" />
-              Distribuição de Despesas
-            </h2>
+          <div className="category-breakdown" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {/* Distribuição de Receitas */}
+            <div>
+              <h2 className="financial-section-title" style={{ marginBottom: '10px' }}>
+                <PieChart size={20} style={{ color: '#10b981' }} />
+                Distribuição de Receitas
+              </h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {revenueCategoryBreakdown.map(cat => {
+                  const color = CATEGORY_COLORS[cat.name] || '#6b7280';
+                  return (
+                    <div className="category-bar-row" key={cat.name}>
+                      <div className="category-bar-info">
+                        <span>{cat.name}</span>
+                        <span>{formatPrice(cat.value)} ({cat.percentage.toFixed(0)}%)</span>
+                      </div>
+                      <div className="category-progress-track">
+                        <div 
+                          className="category-progress-fill" 
+                          style={{ width: `${cat.percentage}%`, background: color }} 
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+                {gains === 0 && (
+                  <p className="text-small text-muted text-center" style={{ padding: '10px' }}>
+                    Nenhuma receita registada.
+                  </p>
+                )}
+              </div>
+            </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {categoryBreakdown.map(cat => {
-                const colors = {
-                  Aluguel: '#ef4444',
-                  Produtos: '#3b82f6',
-                  Energia: '#f59e0b',
-                  Marketing: '#a855f7',
-                  Outros: '#6b7280'
-                };
-                const color = colors[cat.name] || '#6b7280';
-                
-                return (
-                  <div className="category-bar-row" key={cat.name}>
-                    <div className="category-bar-info">
-                      <span>{cat.name}</span>
-                      <span>{formatPrice(cat.value)} ({cat.percentage.toFixed(0)}%)</span>
+            {/* Distribuição de Despesas */}
+            <div>
+              <h2 className="financial-section-title" style={{ marginBottom: '10px' }}>
+                <PieChart size={20} style={{ color: '#ef4444' }} />
+                Distribuição de Despesas
+              </h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {expenseCategoryBreakdown.map(cat => {
+                  const color = CATEGORY_COLORS[cat.name] || '#6b7280';
+                  return (
+                    <div className="category-bar-row" key={cat.name}>
+                      <div className="category-bar-info">
+                        <span>{cat.name}</span>
+                        <span>{formatPrice(cat.value)} ({cat.percentage.toFixed(0)}%)</span>
+                      </div>
+                      <div className="category-progress-track">
+                        <div 
+                          className="category-progress-fill" 
+                          style={{ width: `${cat.percentage}%`, background: color }} 
+                        />
+                      </div>
                     </div>
-                    <div className="category-progress-track">
-                      <div 
-                        className="category-progress-fill" 
-                        style={{ width: `${cat.percentage}%`, background: color }} 
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-              {costs.length === 0 && (
-                <p className="text-small text-muted text-center" style={{ padding: '10px' }}>
-                  Nenhum custo lançado para gerar distribuição.
-                </p>
-              )}
+                  );
+                })}
+                {totalCosts === 0 && (
+                  <p className="text-small text-muted text-center" style={{ padding: '10px' }}>
+                    Nenhuma despesa lançada.
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Lançar Despesa Modal */}
-      {modalOpen && (
+      {/* Lançar Transação Modal */}
+      {modalOpen && createPortal(
         <div className="modal-overlay" onClick={handleCloseModal}>
           <div className="modal animate-scale-in" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '450px', width: '100%' }}>
             <div className="modal-header">
-              <h2 className="heading-md">Lançar Nova Despesa</h2>
+              <h2 className="heading-md">Lançar Nova Transação</h2>
               <button className="btn btn-icon btn-ghost" onClick={handleCloseModal} aria-label="Fechar">
                 <X size={20} />
               </button>
@@ -434,12 +572,27 @@ export default function FinancialAnalysis() {
 
             <form onSubmit={handleAddCostSubmit} className="financial-modal-form">
               <div className="input-group">
+                <label className="input-label" htmlFor="expense-type">Tipo de Transação</label>
+                <select
+                  id="expense-type"
+                  className="input"
+                  style={{ background: 'var(--bg-body)', color: 'var(--text-primary)' }}
+                  value={type}
+                  onChange={(e) => setType(e.target.value)}
+                  required
+                >
+                  <option value="despesa">Despesa (Custo/Saída)</option>
+                  <option value="receita">Receita (Ganho Manual/Entrada)</option>
+                </select>
+              </div>
+
+              <div className="input-group">
                 <label className="input-label" htmlFor="expense-desc">Descrição</label>
                 <input
                   id="expense-desc"
                   className="input"
                   type="text"
-                  placeholder="Ex: Aluguel de Junho"
+                  placeholder="Ex: Venda de Cera Capilar"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   required
@@ -485,18 +638,24 @@ export default function FinancialAnalysis() {
                   onChange={(e) => setCategory(e.target.value)}
                   required
                 >
-                  {CATEGORIES.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
+                  {type === 'despesa'
+                    ? EXPENSE_CATEGORIES.map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))
+                    : REVENUE_CATEGORIES.map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))
+                  }
                 </select>
               </div>
 
               <button className="btn btn-primary btn-full mt-md" type="submit" disabled={saving}>
-                {saving ? 'Lançando...' : 'Lançar Despesa'}
+                {saving ? 'Lançando...' : 'Lançar Transação'}
               </button>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
