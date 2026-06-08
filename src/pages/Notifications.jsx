@@ -62,9 +62,9 @@ export default function Notifications() {
   };
 
   return (
-    <div className="page-enter" style={{ padding: 'var(--spacing-lg) 0', maxWidth: '800px', margin: '0 auto', width: '100%' }}>
+    <div className="page-enter" style={{ padding: 'var(--space-lg) 0', maxWidth: '800px', margin: '0 auto', width: '100%' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-lg)', flexWrap: 'wrap', gap: 'var(--spacing-md)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-lg)', flexWrap: 'wrap', gap: 'var(--space-md)' }}>
         <div>
           <h1 className="heading-lg" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Bell size={28} className="text-accent" />
@@ -85,7 +85,7 @@ export default function Notifications() {
       </div>
 
       {/* Notifications List */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
         {notifications.length > 0 ? (
           [...notifications]
             .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
@@ -96,8 +96,8 @@ export default function Notifications() {
                 className={`card clickable-card ${!notif.read ? 'unread-card' : ''}`}
                 style={{
                   display: 'flex',
-                  gap: 'var(--spacing-md)',
-                  padding: 'var(--spacing-md)',
+                  gap: 'var(--space-md)',
+                  padding: 'var(--space-md)',
                   alignItems: 'flex-start',
                   position: 'relative',
                   borderLeft: !notif.read ? '4px solid var(--accent-primary)' : '1px solid var(--border)',
@@ -157,7 +157,7 @@ export default function Notifications() {
               </div>
             ))
         ) : (
-          <div className="card" style={{ padding: 'var(--spacing-xl)', textAlign: 'center' }}>
+          <div className="card" style={{ padding: 'var(--space-xl)', textAlign: 'center' }}>
             <CheckCheck size={48} style={{ opacity: 0.3, marginBottom: '16px', color: '#10b981', margin: '0 auto' }} />
             <h3 className="heading-md">Nenhuma notificação</h3>
             <p className="text-body text-muted" style={{ maxWidth: '400px', margin: '8px auto 0' }}>

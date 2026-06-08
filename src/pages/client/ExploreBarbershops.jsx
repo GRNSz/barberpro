@@ -146,9 +146,14 @@ export default function ExploreBarbershops() {
           </div>
         )}
         {locationStatus === 'success' && (
-          <div className="text-small" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '8px 12px', borderRadius: 'var(--radius)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>📍 Localização ativada. Exibindo barbearias mais próximas primeiro!</span>
-            <button className="btn btn-sm btn-ghost" onClick={() => { setLocationStatus('idle'); setUserCoords(null); }} style={{ color: '#10b981', minHeight: 'auto', padding: '2px 8px' }}>Desativar</button>
+          <div className="text-small" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '8px 12px', borderRadius: 'var(--radius)', display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'stretch' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>📍 Localização ativada. Exibindo barbearias mais próximas primeiro!</span>
+              <button className="btn btn-sm btn-ghost" onClick={() => { setLocationStatus('idle'); setUserCoords(null); }} style={{ color: '#10b981', minHeight: 'auto', padding: '2px 8px' }}>Desativar</button>
+            </div>
+            <span style={{ fontSize: '0.7rem', opacity: 0.8, marginTop: '2px' }}>
+              ℹ️ Nota: Em computadores desktop, a localização é baseada no provedor de internet (IP) e pode apontar para a capital (como São Paulo).
+            </span>
           </div>
         )}
       </div>

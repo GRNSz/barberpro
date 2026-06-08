@@ -470,8 +470,12 @@ export default function FinancialAnalysis() {
                       </span>
                     </div>
                     <div className="chart-bar-container">
-                      <div className="chart-bar-gain" style={{ width: `${gainWidth}%`, position: 'absolute', left: 0, zIndex: 2 }} />
-                      <div className="chart-bar-cost" style={{ width: `${costWidth}%`, position: 'absolute', left: 0, top: 0, zIndex: 1, opacity: 0.6 }} />
+                      <div className="chart-bar-row" title={`Ganhos: ${formatPrice(m.gains)}`}>
+                        <div className="chart-bar-fill-gain" style={{ width: `${gainWidth}%` }} />
+                      </div>
+                      <div className="chart-bar-row" title={`Custos: ${formatPrice(m.costs)}`}>
+                        <div className="chart-bar-fill-cost" style={{ width: `${costWidth}%` }} />
+                      </div>
                     </div>
                   </div>
                 );

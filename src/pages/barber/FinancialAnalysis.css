@@ -1,10 +1,10 @@
 /* Financial Analysis Dashboard styling */
 
 .financial-page {
-  padding: var(--spacing-lg) 0;
+  padding: var(--space-lg) 0;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-lg);
+  gap: var(--space-xl);
 }
 
 .financial-header {
@@ -12,289 +12,347 @@
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: var(--spacing-md);
+  gap: var(--space-md);
+  margin-bottom: var(--space-xs);
 }
 
 /* --- Stats Grid --- */
 .financial-stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: var(--spacing-md);
+  gap: var(--space-lg);
 }
 
 .financial-stat-card {
-  padding: var(--spacing-md);
-  border-radius: var(--radius);
+  padding: var(--space-lg) var(--space-md);
+  border-radius: var(--radius-lg);
   background: var(--bg-card);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-color);
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  gap: var(--space-md);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .financial-stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg), 0 0 0 1px var(--accent-primary);
+  border-color: var(--accent-primary);
 }
 
 .financial-stat-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.05);
 }
 
 .financial-stat-info {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }
 
 .financial-stat-label {
   font-size: 0.75rem;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.75px;
+  font-weight: 600;
 }
 
 .financial-stat-value {
-  font-size: 1.5rem;
-  font-weight: 700;
+  font-size: 1.6rem;
+  font-weight: 800;
   color: var(--text-primary);
+  line-height: 1.2;
 }
 
 /* --- Main Layout --- */
 .financial-main-grid {
   display: grid;
-  grid-template-columns: 1.5fr 1fr;
-  gap: var(--spacing-lg);
+  grid-template-columns: 1.3fr 1fr;
+  gap: var(--space-xl);
   align-items: start;
 }
 
 @media (max-width: 1024px) {
   .financial-main-grid {
     grid-template-columns: 1fr;
+    gap: var(--space-lg);
   }
 }
 
 .financial-section-title {
-  font-size: 1.1rem;
-  font-weight: 600;
+  font-size: 1.15rem;
+  font-weight: 700;
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  margin-bottom: var(--spacing-md);
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
   color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 14px;
 }
 
 /* --- Costs Management Panel --- */
 .expenses-manager-card {
   background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: var(--spacing-md);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .expenses-filter-bar {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   overflow-x: auto;
-  padding-bottom: 8px;
-  margin-bottom: var(--spacing-md);
+  padding-bottom: 12px;
+  margin-bottom: var(--space-lg);
   scrollbar-width: thin;
 }
 
+.expenses-filter-bar::-webkit-scrollbar {
+  height: 4px;
+}
+
+.expenses-filter-bar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.expenses-filter-bar::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: var(--radius-full);
+}
+
 .expenses-filter-btn {
-  padding: 6px 12px;
+  padding: 8px 16px;
   font-size: 0.8125rem;
-  border-radius: 20px;
-  background: var(--bg-body);
-  border: 1px solid var(--border);
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
   color: var(--text-muted);
   white-space: nowrap;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.expenses-filter-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  transform: translateY(-1px);
 }
 
 .expenses-filter-btn.active {
   background: var(--accent-primary);
-  color: var(--bg-card);
+  color: var(--text-on-accent);
   border-color: var(--accent-primary);
-  font-weight: 600;
+  box-shadow: var(--shadow-accent);
+}
+
+.expenses-filter-btn.active:hover {
+  background: var(--accent-primary);
+  color: var(--text-on-accent);
 }
 
 .expenses-list {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
-  max-height: 480px;
+  gap: var(--space-md);
+  max-height: 520px;
   overflow-y: auto;
-  padding-right: 4px;
+  padding-right: 8px;
+}
+
+/* Custom Scrollbar for Transactions List */
+.expenses-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.expenses-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.expenses-list::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: var(--radius-full);
+}
+
+.expenses-list::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
 }
 
 .expense-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: var(--spacing-sm) var(--spacing-md);
-  background: var(--bg-body);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  transition: background var(--transition-fast);
+  padding: var(--space-md) var(--space-lg);
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  transition: all 0.25s ease;
 }
 
 .expense-item:hover {
-  background: rgba(var(--accent-primary-rgb), 0.03);
+  background: var(--bg-hover);
+  border-color: var(--accent-primary);
+  transform: translateX(4px);
+  box-shadow: var(--shadow-md);
 }
 
 .expense-details {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 6px;
 }
 
 .expense-desc {
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-primary);
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
 }
 
 .expense-meta {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
+  gap: var(--space-sm);
   font-size: 0.75rem;
   color: var(--text-muted);
 }
 
 .expense-category-badge {
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: var(--radius-xs);
+  font-weight: 700;
   text-transform: uppercase;
   font-size: 0.625rem;
+  letter-spacing: 0.5px;
 }
 
 /* Category Colors */
-.badge-aluguel { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
-.badge-produtos { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
-.badge-energia { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
-.badge-marketing { background: rgba(168, 85, 247, 0.15); color: #a855f7; }
-.badge-salários { background: rgba(236, 72, 153, 0.15); color: #ec4899; }
-.badge-serviços { background: rgba(16, 185, 129, 0.15); color: #10b981; }
-.badge-comissão { background: rgba(139, 92, 246, 0.15); color: #8b5cf6; }
-.badge-outros { background: rgba(107, 114, 128, 0.15); color: #6b7280; }
+.badge-aluguel { background: rgba(239, 68, 68, 0.12); color: #ef4444; }
+.badge-produtos { background: rgba(59, 130, 246, 0.12); color: #3b82f6; }
+.badge-energia { background: rgba(245, 158, 11, 0.12); color: #f59e0b; }
+.badge-marketing { background: rgba(168, 85, 247, 0.12); color: #a855f7; }
+.badge-salários { background: rgba(236, 72, 153, 0.12); color: #ec4899; }
+.badge-serviços { background: rgba(16, 185, 129, 0.12); color: #10b981; }
+.badge-comissão { background: rgba(139, 92, 246, 0.12); color: #8b5cf6; }
+.badge-outros { background: rgba(107, 114, 128, 0.12); color: #6b7280; }
 
 .expense-right {
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
+  gap: var(--space-md);
 }
 
 .expense-value {
-  font-weight: 700;
-  color: var(--danger);
-  font-size: 0.9375rem;
+  font-weight: 800;
+  font-size: 1.0625rem;
 }
 
 .expense-delete-btn {
   color: var(--text-muted);
   cursor: pointer;
-  transition: color var(--transition-fast);
+  transition: all 0.2s ease;
+  padding: 6px;
+  border-radius: var(--radius-sm);
 }
 
 .expense-delete-btn:hover {
   color: var(--danger);
+  background: var(--danger-bg);
 }
 
 /* --- Analysis View panel --- */
 .analysis-panel-card {
   background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: var(--spacing-md);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-lg);
+  gap: var(--space-xl);
 }
 
 /* Visual Monthly Chart */
 .monthly-chart {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  gap: var(--space-md);
 }
 
 .chart-bar-group {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
 }
 
 .chart-bar-label {
   font-size: 0.8125rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-primary);
   display: flex;
   justify-content: space-between;
 }
 
 .chart-bar-container {
-  height: 24px;
-  background: var(--bg-body);
-  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: transparent;
+  width: 100%;
+}
+
+.chart-bar-row {
+  height: 8px;
+  background: var(--bg-card);
+  border-radius: var(--radius-full);
   overflow: hidden;
   position: relative;
-  display: flex;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-color);
+  width: 100%;
 }
 
-.chart-bar-gain {
+.chart-bar-fill-gain {
   height: 100%;
   background: linear-gradient(90deg, #10b981, #34d399);
-  transition: width 0.5s ease-out;
+  border-radius: var(--radius-full);
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.chart-bar-cost {
+.chart-bar-fill-cost {
   height: 100%;
   background: linear-gradient(90deg, #ef4444, #f87171);
-  transition: width 0.5s ease-out;
-}
-
-.chart-comparison-bar {
-  height: 14px;
-  background: var(--bg-body);
-  border-radius: 7px;
-  overflow: hidden;
-  display: flex;
-  border: 1px solid var(--border);
-}
-
-.chart-compare-gain {
-  background: var(--success);
-  height: 100%;
-}
-
-.chart-compare-cost {
-  background: var(--danger);
-  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .chart-legend {
   display: flex;
   justify-content: center;
-  gap: var(--spacing-md);
+  flex-wrap: wrap;
+  gap: var(--space-md);
   font-size: 0.75rem;
   color: var(--text-muted);
+  margin-top: var(--space-xs);
 }
 
 .legend-item {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  font-weight: 600;
 }
 
 .legend-dot {
@@ -307,85 +365,102 @@
 .category-breakdown {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
+  gap: var(--space-lg);
 }
 
 .category-bar-row {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .category-bar-info {
   display: flex;
   justify-content: space-between;
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-primary);
 }
 
 .category-progress-track {
   height: 8px;
-  background: var(--bg-body);
-  border-radius: 4px;
+  background: var(--bg-input);
+  border-radius: var(--radius-full);
   overflow: hidden;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-color);
 }
 
 .category-progress-fill {
   height: 100%;
-  border-radius: 4px;
+  border-radius: var(--radius-full);
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Modal Form styling */
 .financial-modal-form {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  gap: var(--space-md);
 }
 
 .financial-form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--spacing-md);
+  gap: var(--space-md);
 }
 
+/* Responsive Media Queries */
 @media (max-width: 480px) {
   .financial-form-row {
     grid-template-columns: 1fr;
   }
+  
   .financial-stats-grid {
     grid-template-columns: repeat(2, 1fr) !important;
-    gap: var(--spacing-sm);
+    gap: var(--space-sm) !important;
   }
+  
   .financial-stat-card {
-    padding: var(--spacing-sm) !important;
+    padding: var(--space-md) var(--space-xs) !important;
     flex-direction: column;
-    align-items: flex-start;
-    text-align: left;
+    align-items: center;
+    text-align: center;
     gap: 8px;
+    border-radius: var(--radius-md);
   }
+  
   .financial-stat-icon {
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
   }
+  
   .financial-stat-icon svg {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
   }
+  
   .financial-stat-value {
-    font-size: 1.1rem !important;
+    font-size: 1.15rem !important;
+    font-weight: 800;
   }
+  
+  .financial-stat-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.2px;
+  }
+
   .expense-item {
     flex-direction: column;
     align-items: flex-start;
-    gap: var(--spacing-sm);
-    padding: var(--spacing-sm);
+    gap: var(--space-sm);
+    padding: var(--space-md);
   }
+  
   .expense-right {
     width: 100%;
     justify-content: space-between;
-    border-top: 1px dashed var(--border);
-    padding-top: var(--spacing-xs);
+    border-top: 1px dashed var(--border-color);
+    padding-top: var(--space-sm);
   }
 }
